@@ -56,7 +56,7 @@ client
     process.exit(1); // Exit if DB connection fails
   });
 
-module.exports = app;
+export default app;
 
 // import express from "./node_modules/express";
 // const app = express();

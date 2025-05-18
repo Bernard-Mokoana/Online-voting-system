@@ -1,7 +1,8 @@
 import express from "express";
-const router = express.Router();
 import authController from "../controllers/authController.js";
 import { loginLimiter, registerLimiter } from "../middlewares/auth.js";
+
+const router = express.Router();
 
 // Public routes
 router.post("/register", registerLimiter, authController.register);

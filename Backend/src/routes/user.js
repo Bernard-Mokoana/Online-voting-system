@@ -1,11 +1,12 @@
-const express = require("express");
-const router = express.Router();
-const userController = require("../controllers/userController");
-const {
+import express from "express";
+import userController from "../controllers/userController.js";
+import {
   authenticateToken,
   authorizeRole,
   verifyEmail,
-} = require("../middlewares/auth");
+} from "../middlewares/auth.js";
+
+const router = express.Router();
 
 // Protected routes
 router.get("/profile", authenticateToken, userController.getProfile);

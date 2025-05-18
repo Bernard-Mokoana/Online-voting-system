@@ -1,11 +1,11 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const voteController = require("../controllers/voteController");
-const {
+import voteController from "../controllers/voteController.js";
+import {
   authenticateToken,
   verifyEmail,
   voteLimiter,
-} = require("../middlewares/auth");
+} from "../middlewares/auth.js";
 
 // Protected routes
 router.post(
