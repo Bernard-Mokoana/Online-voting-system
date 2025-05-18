@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import express from "express";
 import cors from "cors";
 import morgan from "morgan";
@@ -57,3 +58,16 @@ client
   });
 
 module.exports = app;
+=======
+
+import express from './node_modules/express';
+const app = express();
+
+app.get("/", (req, res) => {
+    res.status(200).send("Welcome to the Online Voting System")
+})
+
+app.listen(5000, () => {
+    console.log("Server is up and Running")
+})
+>>>>>>> 5a739bb1043feb6d915c842c77967d38080c8dfb
