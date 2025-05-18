@@ -86,14 +86,7 @@ function AppRoutes() {
             <Route path="/role-selection" element={<RoleSelection />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route
               path="/profile"
               element={
@@ -161,6 +154,7 @@ function AppRoutes() {
             <Route path="/500" element={<ServerError />} />
             <Route path="/maintenance" element={<Maintenance />} />
             <Route path="/404" element={<NotFound />} />
+            <Route path="/dev-dashboard" element={<Dashboard />} />
             <Route path="/" element={<Navigate to="/role-selection" />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
