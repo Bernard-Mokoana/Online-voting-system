@@ -1,25 +1,13 @@
 {
   "name": "online-voting-system-backend",
   "version": "1.0.0",
-<<<<<<< HEAD
   "description": "Backend for Online Voting System",
-=======
-  "main": "app.js",
->>>>>>> 5a739bb1043feb6d915c842c77967d38080c8dfb
   "type": "module",
   "main": "src/index.js",
   "scripts": {
-<<<<<<< HEAD
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js",
-    "test": "jest",
-    "lint": "eslint .",
-    "migrate": "node src/database/migrate.js"
-=======
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/app.js",
     "dev": "nodemon src/app.js"
->>>>>>> 5a739bb1043feb6d915c842c77967d38080c8dfb
   },
   "keywords": [
     "nodejs",
@@ -32,7 +20,6 @@
     "and": "^0.0.3",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
-<<<<<<< HEAD
     "dotenv": "^16.5.0",
     "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
@@ -50,14 +37,5 @@
   },
   "engines": {
     "node": ">=14.0.0"
-=======
-    "dotenv": "^16.4.7",
-    "express": "^5.1.0",
-    "expressjs": "^1.0.1",
-    "jsonwebtoken": "^9.0.2",
-    "nodemon": "^3.1.9",
-    "require": "^0.4.4",
-    "start": "^5.1.0"
->>>>>>> 5a739bb1043feb6d915c842c77967d38080c8dfb
   }
 }
