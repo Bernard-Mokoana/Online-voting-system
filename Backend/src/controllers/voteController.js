@@ -1,4 +1,4 @@
-const { pool } = require("../config/database");
+import pool from "../config/database.js";
 
 const voteController = {
   // Cast a vote
@@ -203,4 +203,4 @@ const voteController = {
   },
 };
 
-module.exports = voteController;
+export default voteController;

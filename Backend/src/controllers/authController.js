@@ -1,9 +1,9 @@
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const { pool } = require("../config/database");
+import pool from "../database/database.js";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 const authController = {
-  // Register a new user
+  // Register a new user (voter or admin)
   register: async (req, res) => {
     try {
       const {
@@ -15,103 +15,112 @@ const authController = {
         dateOfBirth,
         phoneNumber,
         role = "voter",
+        username, // for admin
       } = req.body;
-
-      // Check if user already exists
-      const userExists = await pool.query(
-        "SELECT * FROM users WHERE email = $1 OR id_number = $2",
-        [email, idNumber]
-      );
-
-      if (userExists.rows.length > 0) {
-        return res.status(400).json({ message: "User already exists" });
-      }
 
       // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      // Insert new user
-      const result = await pool.query(
-        `INSERT INTO users (
-          first_name, last_name, email, id_number, password,
-          date_of_birth, phone_number, role
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-        [
-          firstName,
-          lastName,
-          email,
-          idNumber,
-          hashedPassword,
-          dateOfBirth,
-          phoneNumber,
-          role,
-        ]
-      );
-
-      // Generate verification token
-      const verificationToken = jwt.sign(
-        { userId: result.rows[0].id },
-        process.env.JWT_SECRET,
-        { expiresIn: "24h" }
-      );
-
-      // Store verification token
-      await pool.query(
-        `INSERT INTO verification_tokens (user_id, token, type, expires_at)
-         VALUES ($1, $2, $3, NOW() + INTERVAL '24 hours')`,
-        [result.rows[0].id, verificationToken, "email_verification"]
-      );
-
-      // TODO: Send verification email
-
-      res.status(201).json({ message: "User registered successfully" });
+      if (role === "admin") {
+        // Check if admin exists
+        const adminExists = await pool.query(
+          "SELECT * FROM admin WHERE username = $1",
+          [username]
+        );
+        if (adminExists.rows.length > 0) {
+          return res.status(400).json({ message: "Admin already exists" });
+        }
+        await pool.query(
+          "INSERT INTO admin (username, password) VALUES ($1, $2)",
+          [username, hashedPassword]
+        );
+        return res
+          .status(201)
+          .json({ message: "Admin registered successfully" });
+      } else {
+        // Check if voter exists
+        const voterExists = await pool.query(
+          "SELECT * FROM voter WHERE email = $1 OR idnumber = $2",
+          [email, idNumber]
+        );
+        if (voterExists.rows.length > 0) {
+          return res.status(400).json({ message: "Voter already exists" });
+        }
+        await pool.query(
+          `INSERT INTO voter (
+            firstname, lastname, email, idnumber, password,
+            dateofbirth, phonenumber, isverified
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [
+            firstName,
+            lastName,
+            email,
+            idNumber,
+            hashedPassword,
+            dateOfBirth,
+            phoneNumber,
+            true, // isVerified
+          ]
+        );
+        return res
+          .status(201)
+          .json({ message: "Voter registered successfully" });
+      }
     } catch (error) {
       console.error("Registration error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   },
 
-  // Login user
+  // Login user (admin or voter)
   login: async (req, res) => {
     try {
-      const { email, password } = req.body;
+      const { email, password, role } = req.body;
 
-      const result = await pool.query("SELECT * FROM users WHERE email = $1", [
-        email,
-      ]);
-
-      const user = result.rows[0];
-      if (!user || !(await bcrypt.compare(password, user.password))) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      if (!user.is_verified) {
-        return res
-          .status(403)
-          .json({ message: "Please verify your email first" });
+      let user;
+      if (role === "admin") {
+        const result = await pool.query(
+          "SELECT * FROM admin WHERE username = $1",
+          [email]
+        );
+        user = result.rows[0];
+        if (!user)
+          return res.status(401).json({ message: "Invalid credentials" });
+        if (!(await bcrypt.compare(password, user.password))) {
+          return res.status(401).json({ message: "Invalid credentials" });
+        }
+      } else {
+        const result = await pool.query(
+          "SELECT * FROM voter WHERE email = $1",
+          [email]
+        );
+        user = result.rows[0];
+        if (!user)
+          return res.status(401).json({ message: "Invalid credentials" });
+        if (!(await bcrypt.compare(password, user.password))) {
+          return res.status(401).json({ message: "Invalid credentials" });
+        }
+        if (!user.isverified) {
+          return res
+            .status(403)
+            .json({ message: "Please verify your email first" });
+        }
       }
 
       const token = jwt.sign(
-        { id: user.id, role: user.role },
+        { id: user.adminid || user.voterid, role },
         process.env.JWT_SECRET,
         { expiresIn: "24h" }
-      );
-
-      // Log login action
-      await pool.query(
-        `INSERT INTO audit_logs (user_id, action, ip_address)
-         VALUES ($1, $2, $3)`,
-        [user.id, "login", req.ip]
       );
 
       res.json({
         token,
         user: {
-          id: user.id,
-          firstName: user.first_name,
-          lastName: user.last_name,
-          email: user.email,
-          role: user.role,
+          id: user.adminid || user.voterid,
+          firstName: user.firstname,
+          lastName: user.lastname,
+          email: user.email || user.username,
+          role,
         },
       });
     } catch (error) {
@@ -254,4 +263,4 @@ const authController = {
   },
 };
 
-module.exports = authController;
+export default authController;

@@ -20,4 +20,4 @@ router.get("/history", authenticateToken, voteController.getVotingHistory);
 router.get("/verify/:electionId", authenticateToken, voteController.verifyVote);
 router.get("/stats/:electionId", voteController.getVotingStats);
 
-module.exports = router;
+export default router;

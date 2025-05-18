@@ -36,4 +36,4 @@ router.put(
   userController.updateUserRole
 );
 
-module.exports = router;
+export default router;

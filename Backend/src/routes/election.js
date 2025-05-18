@@ -1,12 +1,12 @@
-const express = require("express");
-const router = express.Router();
-const electionController = require("../controllers/electionController");
-const {
+import express from "express";
+import electionController from "../controllers/electionController.js";
+import {
   authenticateToken,
   authorizeRole,
   verifyEmail,
-} = require("../middlewares/auth");
+} from "../middlewares/auth.js";
 
+const router = express.Router();
 // Public routes
 router.get("/", electionController.getAllElections);
 router.get("/:id", electionController.getElectionById);
@@ -32,4 +32,4 @@ router.delete(
   electionController.deleteElection
 );
 
-module.exports = router;
+export default router;

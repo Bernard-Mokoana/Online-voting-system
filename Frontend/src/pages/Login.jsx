@@ -49,7 +49,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await login(formData.email, formData.password);
+      await login(formData.email, formData.password, selectedRole);
       navigate("/");
     } catch (err) {
       setError(err.response?.data?.message || "An error occurred during login");

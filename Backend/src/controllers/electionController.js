@@ -1,4 +1,4 @@
-const { pool } = require("../config/database");
+import pool from "../database/database.js";
 
 const electionController = {
   // Create new election
@@ -267,4 +267,4 @@ const electionController = {
   },
 };
 
-module.exports = electionController;
+export default electionController;

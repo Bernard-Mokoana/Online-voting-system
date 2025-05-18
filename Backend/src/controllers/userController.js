@@ -1,5 +1,5 @@
-const bcrypt = require("bcrypt");
-const { pool } = require("../config/database");
+import pool from "../config/database.js";
+import bcrypt from "bcrypt";
 
 const userController = {
   // Get user profile
@@ -219,4 +219,4 @@ const userController = {
   },
 };
 
-module.exports = userController;
+export default userController;

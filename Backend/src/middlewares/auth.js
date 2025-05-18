@@ -1,8 +1,9 @@
-const jwt = require("jsonwebtoken");
-const { pool } = require("../config/database");
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
+import pool from "../database/database.js";
 
 // Verify JWT token
-const authenticateToken = (req, res, next) => {
+export const authenticateToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
 
@@ -20,23 +21,30 @@ const authenticateToken = (req, res, next) => {
 };
 
 // Role-based authorization
-const authorizeRole = (roles) => {
+export const authorizeRole = (roles) => {
   return async (req, res, next) => {
     try {
-      const result = await pool.query("SELECT role FROM users WHERE id = $1", [
-        req.user.id,
-      ]);
-
-      if (result.rows.length === 0) {
-        return res.status(404).json({ message: "User not found" });
+      let userRole;
+      if (req.user.role === "admin") {
+        const result = await pool.query(
+          "SELECT * FROM admin WHERE adminid = $1",
+          [req.user.id]
+        );
+        userRole = "admin";
+        if (!result.rows.length)
+          return res.status(404).json({ message: "Admin not found" });
+      } else {
+        const result = await pool.query(
+          "SELECT * FROM voter WHERE voterid = $1",
+          [req.user.id]
+        );
+        userRole = "voter";
+        if (!result.rows.length)
+          return res.status(404).json({ message: "Voter not found" });
       }
-
-      const userRole = result.rows[0].role;
-
       if (!roles.includes(userRole)) {
         return res.status(403).json({ message: "Unauthorized access" });
       }
-
       next();
     } catch (error) {
       console.error("Role authorization error:", error);
@@ -46,7 +54,7 @@ const authorizeRole = (roles) => {
 };
 
 // Verify email middleware
-const verifyEmail = async (req, res, next) => {
+export const verifyEmail = async (req, res, next) => {
   try {
     const result = await pool.query(
       "SELECT is_verified FROM users WHERE id = $1",
@@ -71,21 +79,21 @@ const verifyEmail = async (req, res, next) => {
 };
 
 // Rate limiting middleware
-const rateLimit = require("express-rate-limit");
+export const rateLimit = require("express-rate-limit");
 
-const loginLimiter = rateLimit({
+export const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 attempts
   message: "Too many login attempts, please try again after 15 minutes",
 });
 
-const registerLimiter = rateLimit({
+export const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 3, // 3 attempts
   message: "Too many registration attempts, please try again after 1 hour",
 });
 
-const voteLimiter = rateLimit({
+export const voteLimiter = rateLimit({
   windowMs: 24 * 60 * 60 * 1000, // 24 hours
   max: 1, // 1 vote per day
   message: "You can only vote once per day",
