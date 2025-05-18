@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Generate Placeholder Images</title>
+    <style>
+      .character-card {
+        width: 400px;
+        height: 400px;
+        margin: 20px;
+        display: inline-block;
+        position: relative;
+        color: white;
+        font-family: Arial, sans-serif;
+        font-size: 48px;
+        font-weight: bold;
+        text-align: center;
+        line-height: 400px;
+      }
+      .controls {
+        margin: 20px;
+      }
+      button {
+        padding: 10px 20px;
+        font-size: 16px;
+        margin: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="controls">
+      <button onclick="downloadAll()">Download All Images</button>
+    </div>
+    <div id="cards"></div>
+
+    <script>
+      const characters = [
+        { name: "Totoro", color: "#4CAF50" },
+        { name: "Sophie", color: "#2196F3" },
+        { name: "Ponyo", color: "#FF9800" },
+        { name: "Chihiro", color: "#9C27B0" },
+        { name: "Kiki", color: "#E91E63" },
+        { name: "Howl", color: "#607D8B" },
+      ];
+
+      // Create cards
+      const cardsContainer = document.getElementById("cards");
+      characters.forEach((character) => {
+        const card = document.createElement("div");
+        card.className = "character-card";
+        card.style.backgroundColor = character.color;
+        card.textContent = character.name;
+        card.id = character.name.toLowerCase();
+        cardsContainer.appendChild(card);
+      });
+
+      // Function to download a single image
+      function downloadImage(element, filename) {
+        const canvas = document.createElement("canvas");
+        canvas.width = element.offsetWidth;
+        canvas.height = element.offsetHeight;
+        const ctx = canvas.getContext("2d");
+
+        // Draw background
+        ctx.fillStyle = element.style.backgroundColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw text
+        ctx.fillStyle = "white";
+        ctx.font = "bold 48px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(element.textContent, canvas.width / 2, canvas.height / 2);
+
+        // Download
+        const link = document.createElement("a");
+        link.download = filename;
+        link.href = canvas.toDataURL("image/jpeg");
+        link.click();
+      }
+
+      // Function to download all images
+      function downloadAll() {
+        characters.forEach((character) => {
+          const element = document.getElementById(character.name.toLowerCase());
+          downloadImage(element, `${character.name.toLowerCase()}.jpg`);
+        });
+      }
+    </script>
+  </body>
+</html>
