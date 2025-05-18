@@ -8,10 +8,10 @@ dotenv.config();
 import client from "./database/database.js";
 
 // Import routes
-import authRoutes from "./routes/auth.js";
-import userRoutes from "./routes/user.js";
-import electionRoutes from "./routes/election.js";
-import voteRoutes from "./routes/vote.js";
+import authRoutes from "./routes/authRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import electionRoutes from "./routes/electionRoutes.js";
+import voteRoutes from "./routes/voteRoutes.js";
 
 const app = express();
 
