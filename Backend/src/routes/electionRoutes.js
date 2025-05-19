@@ -1,35 +1,21 @@
 import express from "express";
 import electionController from "../controllers/electionController.js";
-import {
-  authenticateToken,
-  authorizeRole,
-  verifyEmail,
-} from "../middlewares/auth.js";
 
 const router = express.Router();
-// Public routes
-router.get("/", electionController.getAllElections);
-router.get("/:id", electionController.getElectionById);
-router.get("/:id/stats", electionController.getElectionStats);
 
-// Protected routes
-router.post(
-  "/",
-  authenticateToken,
-  authorizeRole(["admin"]),
-  electionController.createElection
-);
-router.put(
-  "/:id",
-  authenticateToken,
-  authorizeRole(["admin"]),
-  electionController.updateElection
-);
-router.delete(
-  "/:id",
-  authenticateToken,
-  authorizeRole(["admin"]),
-  electionController.deleteElection
-);
+// Route to get all elections
+router.get("/", electionController.getAllElections);
+
+// Route to get a specific election by ID
+router.get("/:id", electionController.getElectionById);
+
+// Route to create a new election
+router.post("/", electionController.createElection);
+
+// Route to update an election
+router.put("/:id", electionController.updateElection);
+
+// Route to delete an election
+router.delete("/:id", electionController.deleteElection);
 
 export default router;

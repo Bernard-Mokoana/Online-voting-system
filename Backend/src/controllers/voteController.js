@@ -68,5 +68,3 @@ export const getVoteResults = async (req, res) => {
     });
   }
 };
-
-// Add other vote-related functions as needed

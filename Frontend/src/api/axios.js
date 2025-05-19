@@ -40,6 +40,14 @@ instance.interceptors.response.use(
       window.location.href = "/login";
     }
 
+    // Handle 500 Internal Server Error
+    if (error.response?.status === 500) {
+      console.error(
+        "Server error:",
+        error.response.data?.message || "Unknown error"
+      );
+    }
+
     return Promise.reject(error);
   }
 );

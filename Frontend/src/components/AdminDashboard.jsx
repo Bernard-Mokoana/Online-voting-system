@@ -3,259 +3,172 @@ import {
   Box,
   Paper,
   Typography,
-  TextField,
   Button,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-  IconButton,
-  Tabs,
-  Tab,
-  Alert,
   Grid,
-  CircularProgress,
+  Card,
+  CardContent,
+  CardActions,
+  Alert,
 } from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
-import AddIcon from "@mui/icons-material/Add";
-import RefreshIcon from "@mui/icons-material/Refresh";
-import { useNavigate } from "react-router-dom";
-import axios from "../api/axios";
-
-// Test data
-const initialCandidates = [
-  { id: 1, name: "John Doe", votes: 150 },
-  { id: 2, name: "Jane Smith", votes: 120 },
-  { id: 3, name: "Bob Johnson", votes: 80 },
-];
+import { Add, Edit, Delete, Visibility, Info } from "@mui/icons-material";
+import axios from "axios";
 
 const AdminDashboard = () => {
-  const navigate = useNavigate();
-  const [tabValue, setTabValue] = useState(0);
-  const [candidates, setCandidates] = useState(initialCandidates);
-  const [newCandidate, setNewCandidate] = useState("");
-  const [message, setMessage] = useState("");
-  const [alertType, setAlertType] = useState("info");
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  // Mock data for fallback
+  const mockElections = [
+    {
+      ElectionID: 1,
+      ElectionName: "Presidential Election 2025",
+      Description: "Vote for the next president.",
+      StartDate: "2025-05-01T08:00:00Z",
+      EndDate: "2025-05-10T18:00:00Z",
+    },
+    {
+      ElectionID: 2,
+      ElectionName: "Local Council Election 2025",
+      Description: "Vote for your local council representatives.",
+      StartDate: "2025-06-01T08:00:00Z",
+      EndDate: "2025-06-05T18:00:00Z",
+    },
+  ];
+
+  const [elections, setElections] = useState([]);
+  const [message, setMessage] = useState({ text: "", severity: "info" });
 
   useEffect(() => {
-    fetchStats();
+    const fetchElections = async () => {
+      try {
+        // Fetch data from the backend
+        const response = await axios.get("/api/elections");
+        setElections(response.data);
+      } catch (error) {
+        console.error("Backend error:", error);
+        // Fallback to mock data
+        setElections(mockElections);
+        setMessage({
+          text: "Unable to fetch data from the server. Using fallback data.",
+          severity: "warning",
+        });
+      }
+    };
+
+    fetchElections();
   }, []);
 
-  const fetchStats = async () => {
-    try {
-      const response = await axios.get("/api/admin/dashboard");
-      setStats(response.data);
-    } catch {
-      setError("Failed to fetch dashboard statistics");
-    } finally {
-      setLoading(false);
-    }
+  const handleAddElection = () => {
+    setMessage({
+      text: "Add Election functionality is not implemented yet.",
+      severity: "info",
+    });
   };
 
-  const handleAddCandidate = () => {
-    if (newCandidate.trim()) {
-      const newId = Math.max(...candidates.map((c) => c.id)) + 1;
-      setCandidates([
-        ...candidates,
-        { id: newId, name: newCandidate, votes: 0 },
-      ]);
-      setNewCandidate("");
-      setMessage("Candidate added successfully!");
-      setAlertType("success");
-    }
+  const handleEditElection = (electionID) => {
+    setMessage({
+      text: `Edit Election ${electionID} functionality is not implemented yet.`,
+      severity: "info",
+    });
   };
 
-  const handleDeleteCandidate = (id) => {
-    setCandidates(candidates.filter((c) => c.id !== id));
-    setMessage("Candidate deleted successfully!");
-    setAlertType("success");
+  const handleDeleteElection = (electionID) => {
+    setMessage({
+      text: `Delete Election ${electionID} functionality is not implemented yet.`,
+      severity: "warning",
+    });
   };
 
-  const handleRefreshResults = () => {
-    // Simulate refreshing results
-    setMessage("Results refreshed!");
-    setAlertType("info");
+  const handleViewDetails = (electionName) => {
+    setMessage({
+      text: `View details for ${electionName}.`,
+      severity: "info",
+    });
   };
-
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" p={3}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Alert severity="error" sx={{ m: 2 }}>
-        {error}
-      </Alert>
-    );
-  }
 
   return (
-    <Box>
-      {message && (
-        <Alert severity={alertType} sx={{ mb: 2 }}>
-          {message}
+    <Box sx={{ p: 2 }}>
+      {message.text && (
+        <Alert severity={message.severity} sx={{ mb: 2 }}>
+          {message.text}
         </Alert>
       )}
 
-      <Tabs
-        value={tabValue}
-        onChange={(_, newValue) => setTabValue(newValue)}
-        sx={{ mb: 3 }}
-      >
-        <Tab label="Manage Candidates" />
-        <Tab label="View Results" />
-      </Tabs>
+      <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
+        Admin Dashboard
+      </Typography>
 
-      {tabValue === 0 && (
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Add New Candidate
-          </Typography>
-          <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
-            <TextField
-              label="Candidate Name"
-              value={newCandidate}
-              onChange={(e) => setNewCandidate(e.target.value)}
-              fullWidth
-            />
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleAddCandidate}
-              disabled={!newCandidate.trim()}
-            >
-              Add
-            </Button>
-          </Box>
+      <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Manage Elections
+        </Typography>
 
-          <Typography variant="h6" gutterBottom>
-            Current Candidates
-          </Typography>
-          <List>
-            {candidates.map((candidate) => (
-              <ListItem key={candidate.id}>
-                <ListItemText primary={candidate.name} />
-                <ListItemSecondaryAction>
-                  <IconButton
-                    edge="end"
-                    aria-label="delete"
-                    onClick={() => handleDeleteCandidate(candidate.id)}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </ListItemSecondaryAction>
-              </ListItem>
-            ))}
-          </List>
-        </Paper>
-      )}
+        <Button
+          variant="contained"
+          startIcon={<Add />}
+          onClick={handleAddElection}
+          sx={{ mb: 3 }}
+        >
+          Add New Election
+        </Button>
 
-      {tabValue === 1 && (
-        <Paper sx={{ p: 3 }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
-            <Typography variant="h6">Election Results</Typography>
-            <Button
-              variant="outlined"
-              startIcon={<RefreshIcon />}
-              onClick={handleRefreshResults}
-            >
-              Refresh
-            </Button>
-          </Box>
-
+        {elections.length === 0 ? (
+          <Alert severity="info" icon={<Info />}>
+            No elections available.
+          </Alert>
+        ) : (
           <Grid container spacing={2}>
-            {candidates.map((candidate) => (
-              <Grid item xs={12} sm={6} md={4} key={candidate.id}>
-                <Paper
-                  sx={{
-                    p: 2,
-                    textAlign: "center",
-                    bgcolor: "primary.light",
-                    color: "primary.contrastText",
-                  }}
-                >
-                  <Typography variant="h6">{candidate.name}</Typography>
-                  <Typography variant="h4">{candidate.votes}</Typography>
-                  <Typography variant="body2">votes</Typography>
-                </Paper>
+            {elections.map((election) => (
+              <Grid item xs={12} key={election.ElectionID}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6">
+                      {election.ElectionName}
+                    </Typography>
+                    <Typography color="text.secondary" paragraph>
+                      {election.Description}
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={6}>
+                        <Typography variant="body2">
+                          <strong>Start:</strong>{" "}
+                          {new Date(election.StartDate).toLocaleString()}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="body2">
+                          <strong>End:</strong>{" "}
+                          {new Date(election.EndDate).toLocaleString()}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                  <CardActions>
+                    <Button
+                      size="small"
+                      startIcon={<Edit />}
+                      onClick={() => handleEditElection(election.ElectionID)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      size="small"
+                      startIcon={<Delete />}
+                      onClick={() => handleDeleteElection(election.ElectionID)}
+                    >
+                      Delete
+                    </Button>
+                    <Button
+                      size="small"
+                      startIcon={<Visibility />}
+                      onClick={() => handleViewDetails(election.ElectionName)}
+                    >
+                      View Details
+                    </Button>
+                  </CardActions>
+                </Card>
               </Grid>
             ))}
           </Grid>
-        </Paper>
-      )}
-
-      <Grid container spacing={2} sx={{ mt: 3 }}>
-        <Grid item xs={12} md={3}>
-          <Paper sx={{ p: 2, display: "flex", flexDirection: "column" }}>
-            <Typography variant="h6" gutterBottom>
-              Total Voters
-            </Typography>
-            <Typography variant="h4">{stats?.totalVoters || 0}</Typography>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Paper sx={{ p: 2, display: "flex", flexDirection: "column" }}>
-            <Typography variant="h6" gutterBottom>
-              Total Candidates
-            </Typography>
-            <Typography variant="h4">{stats?.totalCandidates || 0}</Typography>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Paper sx={{ p: 2, display: "flex", flexDirection: "column" }}>
-            <Typography variant="h6" gutterBottom>
-              Total Votes
-            </Typography>
-            <Typography variant="h4">{stats?.totalVotes || 0}</Typography>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Paper sx={{ p: 2, display: "flex", flexDirection: "column" }}>
-            <Typography variant="h6" gutterBottom>
-              Active Elections
-            </Typography>
-            <Typography variant="h4">{stats?.activeElections || 0}</Typography>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12}>
-          <Paper sx={{ p: 2, display: "flex", flexDirection: "column" }}>
-            <Typography variant="h6" gutterBottom>
-              Quick Actions
-            </Typography>
-            <Box sx={{ display: "flex", gap: 2 }}>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={() => navigate("/elections/create")}
-              >
-                Create Election
-              </Button>
-              <Button
-                variant="contained"
-                color="secondary"
-                onClick={() => navigate("/users")}
-              >
-                Manage Users
-              </Button>
-              <Button
-                variant="contained"
-                color="info"
-                onClick={() => navigate("/candidates")}
-              >
-                Manage Candidates
-              </Button>
-            </Box>
-          </Paper>
-        </Grid>
-      </Grid>
+        )}
+      </Paper>
     </Box>
   );
 };

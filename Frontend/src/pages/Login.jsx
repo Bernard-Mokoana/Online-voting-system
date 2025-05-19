@@ -19,7 +19,7 @@ const Login = () => {
   const location = useLocation();
   const { login } = useAuth();
   const [formData, setFormData] = useState({
-    email: "",
+    usernameOrEmail: "",
     password: "",
   });
   const [error, setError] = useState("");
@@ -49,11 +49,12 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await login(formData.email, formData.password, selectedRole);
       if (selectedRole === "admin") {
-        navigate("../components/AdminDashboard.jsx");
+        await login(formData.usernameOrEmail, formData.password, "admin");
+        navigate("/admin-dashboard");
       } else {
-        navigate("../components/VoterDashboard.jsx");
+        await login(formData.usernameOrEmail, formData.password, "voter");
+        navigate("/voter-dashboard");
       }
     } catch (err) {
       setError(err.response?.data?.message || "An error occurred during login");
@@ -64,6 +65,10 @@ const Login = () => {
 
   const handleRegister = () => {
     navigate(`/register?role=${selectedRole}`);
+  };
+
+  const handleRoleChange = () => {
+    navigate("/role-selection");
   };
 
   return (
@@ -82,10 +87,10 @@ const Login = () => {
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
-              label="Email"
-              name="email"
-              type="email"
-              value={formData.email}
+              label={selectedRole === "admin" ? "Username" : "Email"}
+              name="usernameOrEmail"
+              type={selectedRole === "admin" ? "text" : "email"}
+              value={formData.usernameOrEmail}
               onChange={handleChange}
               margin="normal"
               required
@@ -121,23 +126,23 @@ const Login = () => {
             </Divider>
           </Box>
 
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <Button
-              fullWidth
-              variant="outlined"
-              color="primary"
-              size="large"
-              startIcon={<PersonAddIcon />}
-              onClick={handleRegister}
-            >
-              Create New{" "}
-              {selectedRole.charAt(0).toUpperCase() + selectedRole.slice(1)}{" "}
-              Account
-            </Button>
-            <Button color="primary" onClick={() => navigate("/role-selection")}>
-              Change Role
-            </Button>
-          </Box>
+          {selectedRole === "voter" && (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <Button
+                fullWidth
+                variant="outlined"
+                color="primary"
+                size="large"
+                startIcon={<PersonAddIcon />}
+                onClick={handleRegister}
+              >
+                Create New Voter Account
+              </Button>
+              <Button color="primary" onClick={handleRoleChange}>
+                Change Role
+              </Button>
+            </Box>
+          )}
         </Paper>
       </Box>
     </Container>

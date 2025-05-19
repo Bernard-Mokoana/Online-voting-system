@@ -37,7 +37,7 @@ export const createVoter = async (voter) => {
 
 export const getAllVoters = async () => {
   const result = await pool.query(`
-    SELECT v.*, a.Country, a.Province, a.City, a.StreetAddress
+    SELECT v.*, a.Country, a.Province, a.City, a.street
     FROM Voter v
     JOIN Address a ON v.AddressID = a.AddressID
     ORDER BY v.VoterID

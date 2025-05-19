@@ -15,13 +15,14 @@ const NotFound = () => {
           Page Not Found
         </Typography>
         <Typography color="text.secondary" paragraph>
-          The page you are looking for does not exist or has been moved.
+          The page you are looking for does not exist or has been moved. Please
+          check the URL or return to the dashboard.
         </Typography>
         <Box sx={{ mt: 3 }}>
           <Button
             variant="contained"
             color="primary"
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/dashboard")}
           >
             Go to Dashboard
           </Button>

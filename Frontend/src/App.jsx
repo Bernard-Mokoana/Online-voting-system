@@ -16,6 +16,8 @@ import Navigation from "./components/Navigation";
 const Login = React.lazy(() => import("./pages/Login"));
 const Register = React.lazy(() => import("./pages/Register"));
 const Profile = React.lazy(() => import("./pages/Profile"));
+const VoterDashboard = React.lazy(() => import("./components/VoterDashboard"));
+const AdminDashboard = React.lazy(() => import("./components/AdminDashboard"));
 const Users = React.lazy(() => import("./pages/Users"));
 const Elections = React.lazy(() => import("./pages/Elections"));
 const Candidates = React.lazy(() => import("./pages/Candidates"));
@@ -168,7 +170,14 @@ function AppRoutes() {
             <Route path="/500" element={<ServerError />} />
             <Route path="/maintenance" element={<Maintenance />} />
             <Route path="/404" element={<NotFound />} />
-            <Route path="/dev-dashboard" element={<Dashboard />} />
+            <Route
+              path="./components/VoterDashboard.jsx"
+              element={<VoterDashboard />}
+            />
+            <Route
+              path="./components/AdminDashboard.jsx"
+              element={<AdminDashboard />}
+            />
             <Route path="/" element={<Navigate to="/role-selection" />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
@@ -185,6 +194,8 @@ function App() {
       <AuthProvider>
         <Router>
           <AppRoutes />
+          {/* <VoterDashboard />
+          <AdminDashboard /> */}
         </Router>
       </AuthProvider>
     </ThemeProvider>

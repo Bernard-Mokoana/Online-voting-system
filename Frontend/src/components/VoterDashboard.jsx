@@ -13,94 +13,126 @@ import {
   Card,
   CardContent,
   CardActions,
-  CircularProgress,
 } from "@mui/material";
-import HowToVoteIcon from "@mui/icons-material/HowToVote";
-import VisibilityIcon from "@mui/icons-material/Visibility";
+import {
+  HowToVote,
+  Visibility,
+  History,
+  CalendarToday,
+  Info,
+} from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import axios from "../api/axios";
-
-// Test data
-const initialCandidates = [
-  { id: 1, name: "John Doe", votes: 150 },
-  { id: 2, name: "Jane Smith", votes: 120 },
-  { id: 3, name: "Bob Johnson", votes: 80 },
-];
+import axios from "axios";
 
 const VoterDashboard = () => {
   const navigate = useNavigate();
+
+  // Mock data for fallback
+  const mockActiveElections = [
+    {
+      ElectionID: 1,
+      ElectionName: "Presidential Election 2025",
+      Description: "Vote for the next president.",
+      StartDate: "2025-05-01T08:00:00Z",
+      EndDate: "2025-05-10T18:00:00Z",
+    },
+  ];
+
+  const mockCandidates = [
+    {
+      CandidateID: 1,
+      FirstName: "John",
+      LastName: "Doe",
+      Party: "Democratic",
+      Votes: 120,
+    },
+    {
+      CandidateID: 2,
+      FirstName: "Jane",
+      LastName: "Smith",
+      Party: "Republican",
+      Votes: 150,
+    },
+  ];
+
+  const mockUser = {
+    firstname: "Alice",
+    hasVoted: false,
+  };
+
+  const [activeElections, setActiveElections] = useState([]);
+  const [candidates, setCandidates] = useState([]);
+  const [user, setUser] = useState({});
   const [view, setView] = useState("vote");
   const [selectedCandidate, setSelectedCandidate] = useState("");
-  const [message, setMessage] = useState("");
-  const [alertType, setAlertType] = useState("info");
-  const [hasVoted, setHasVoted] = useState(false);
-  const [activeElections, setActiveElections] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState({ text: "", severity: "info" });
 
   useEffect(() => {
-    fetchActiveElections();
+    const fetchData = async () => {
+      try {
+        // Fetch data from the backend
+        const [electionsRes, candidatesRes, userRes] = await Promise.all([
+          axios.get("/api/elections/active"),
+          axios.get("/api/candidates"),
+          axios.get("/api/voters"),
+        ]);
+
+        setActiveElections(
+          Array.isArray(electionsRes.data) ? electionsRes.data : []
+        );
+        setCandidates(
+          Array.isArray(candidatesRes.data) ? candidatesRes.data : []
+        );
+        setUser(userRes.data || {});
+      } catch (error) {
+        console.error("Backend error:", error);
+        // Fallback to mock data
+        setActiveElections(mockActiveElections);
+        setCandidates(mockCandidates);
+        setUser(mockUser);
+        setMessage({
+          text: "Unable to fetch data from the server. Using fallback data.",
+          severity: "warning",
+        });
+      }
+    };
+
+    fetchData();
   }, []);
 
-  const fetchActiveElections = async () => {
-    try {
-      const response = await axios.get("/api/elections/active");
-      setActiveElections(response.data);
-    } catch {
-      setError("Failed to fetch active elections");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleVote = () => {
-    if (selectedCandidate) {
-      setHasVoted(true);
-      setMessage("Your vote has been recorded successfully!");
-      setAlertType("success");
-      // In a real app, this would make an API call to record the vote
-    }
-  };
+    if (!selectedCandidate) return;
 
-  const handleViewResults = () => {
+    setMessage({
+      text: "Your vote has been recorded successfully!",
+      severity: "success",
+    });
     setView("results");
   };
 
-  const handleBackToVote = () => {
-    setView("vote");
-  };
-
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" p={3}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Alert severity="error" sx={{ m: 2 }}>
-        {error}
-      </Alert>
-    );
-  }
+  const handleViewResults = () => setView("results");
+  const handleBackToVote = () => setView("vote");
 
   return (
-    <Box>
-      {message && (
-        <Alert severity={alertType} sx={{ mb: 2 }}>
-          {message}
+    <Box sx={{ p: 2 }}>
+      {message.text && (
+        <Alert severity={message.severity} sx={{ mb: 2 }}>
+          {message.text}
         </Alert>
       )}
 
+      <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
+        Welcome, {user.firstname || "User"}!
+      </Typography>
+
       {view === "vote" ? (
-        <Paper sx={{ p: 3 }}>
+        <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
           <Typography variant="h6" gutterBottom>
+            <HowToVote sx={{ verticalAlign: "middle", mr: 1 }} />
             Cast Your Vote
           </Typography>
           <Typography variant="body1" color="text.secondary" paragraph>
-            Please select your preferred candidate from the list below.
+            Select your preferred candidate:
           </Typography>
 
           <FormControl component="fieldset" sx={{ width: "100%", mb: 3 }}>
@@ -108,13 +140,13 @@ const VoterDashboard = () => {
               value={selectedCandidate}
               onChange={(e) => setSelectedCandidate(e.target.value)}
             >
-              {initialCandidates.map((candidate) => (
+              {candidates.map((candidate) => (
                 <FormControlLabel
-                  key={candidate.id}
-                  value={candidate.id.toString()}
+                  key={candidate.CandidateID}
+                  value={candidate.CandidateID.toString()}
                   control={<Radio />}
-                  label={candidate.name}
-                  disabled={hasVoted}
+                  label={`${candidate.FirstName} ${candidate.LastName} (${candidate.Party})`}
+                  disabled={user.hasVoted}
                 />
               ))}
             </RadioGroup>
@@ -123,16 +155,16 @@ const VoterDashboard = () => {
           <Box sx={{ display: "flex", gap: 2 }}>
             <Button
               variant="contained"
-              startIcon={<HowToVoteIcon />}
+              startIcon={<HowToVote />}
               onClick={handleVote}
-              disabled={!selectedCandidate || hasVoted}
+              disabled={!selectedCandidate || user.hasVoted}
               fullWidth
             >
-              {hasVoted ? "Vote Cast" : "Cast Vote"}
+              {user.hasVoted ? "Already Voted" : "Submit Vote"}
             </Button>
             <Button
               variant="outlined"
-              startIcon={<VisibilityIcon />}
+              startIcon={<Visibility />}
               onClick={handleViewResults}
               fullWidth
             >
@@ -141,21 +173,25 @@ const VoterDashboard = () => {
           </Box>
         </Paper>
       ) : (
-        <Paper sx={{ p: 3 }}>
+        <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
           <Typography variant="h6" gutterBottom>
+            <Visibility sx={{ verticalAlign: "middle", mr: 1 }} />
             Election Results
           </Typography>
 
           <Grid container spacing={2} sx={{ mb: 3 }}>
-            {initialCandidates.map((candidate) => (
-              <Grid item xs={12} sm={6} md={4} key={candidate.id}>
+            {candidates.map((candidate) => (
+              <Grid item xs={12} sm={6} md={4} key={candidate.CandidateID}>
                 <Card>
                   <CardContent>
                     <Typography variant="h6" gutterBottom>
-                      {candidate.name}
+                      {candidate.FirstName} {candidate.LastName}
                     </Typography>
-                    <Typography variant="h4" color="primary">
-                      {candidate.votes}
+                    <Typography variant="subtitle1" color="text.secondary">
+                      {candidate.Party}
+                    </Typography>
+                    <Typography variant="h4" color="primary" sx={{ mt: 1 }}>
+                      {candidate.Votes || 0}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       votes
@@ -172,76 +208,85 @@ const VoterDashboard = () => {
         </Paper>
       )}
 
-      <Grid item xs={12}>
-        <Paper sx={{ p: 2, display: "flex", flexDirection: "column" }}>
-          <Typography variant="h6" gutterBottom>
-            Active Elections
-          </Typography>
-          {activeElections.length === 0 ? (
-            <Typography color="text.secondary">
-              No active elections at the moment.
-            </Typography>
-          ) : (
-            <Grid container spacing={2}>
-              {activeElections.map((election) => (
-                <Grid item xs={12} md={6} lg={4} key={election.id}>
-                  <Card>
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom>
-                        {election.title}
-                      </Typography>
-                      <Typography color="text.secondary" gutterBottom>
-                        {election.description}
-                      </Typography>
-                      <Typography variant="body2">
-                        Start Date:{" "}
-                        {new Date(election.startDate).toLocaleDateString()}
-                      </Typography>
-                      <Typography variant="body2">
-                        End Date:{" "}
-                        {new Date(election.endDate).toLocaleDateString()}
-                      </Typography>
-                    </CardContent>
-                    <CardActions>
+      <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          <CalendarToday sx={{ verticalAlign: "middle", mr: 1 }} />
+          Active Elections
+        </Typography>
+
+        {activeElections.length === 0 ? (
+          <Alert severity="info" icon={<Info />}>
+            No active elections at the moment.
+          </Alert>
+        ) : (
+          <Grid container spacing={2}>
+            {activeElections.map((election) => (
+              <Grid item xs={12} key={election.ElectionID}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6">
+                      {election.ElectionName}
+                    </Typography>
+                    <Typography color="text.secondary" paragraph>
+                      {election.Description}
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={6}>
+                        <Typography variant="body2">
+                          <strong>Start:</strong>{" "}
+                          {new Date(election.StartDate).toLocaleString()}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="body2">
+                          <strong>End:</strong>{" "}
+                          {new Date(election.EndDate).toLocaleString()}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                  <CardActions>
+                    <Button
+                      size="small"
+                      startIcon={<Info />}
+                      onClick={() =>
+                        navigate(`/elections/${election.ElectionID}`)
+                      }
+                    >
+                      Details
+                    </Button>
+                    {!user.hasVoted && (
                       <Button
                         size="small"
-                        color="primary"
-                        onClick={() => navigate(`/elections/${election.id}`)}
-                      >
-                        View Details
-                      </Button>
-                      <Button
-                        size="small"
-                        color="secondary"
+                        startIcon={<HowToVote />}
                         onClick={() =>
-                          navigate(`/elections/${election.id}/vote`)
+                          navigate(`/elections/${election.ElectionID}/vote`)
                         }
                       >
                         Vote Now
                       </Button>
-                    </CardActions>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          )}
-        </Paper>
-      </Grid>
+                    )}
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        )}
+      </Paper>
 
-      <Grid item xs={12}>
-        <Paper sx={{ p: 2, display: "flex", flexDirection: "column" }}>
-          <Typography variant="h6" gutterBottom>
-            Your Voting History
-          </Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => navigate("/voting-history")}
-          >
-            View Voting History
-          </Button>
-        </Paper>
-      </Grid>
+      <Paper elevation={3} sx={{ p: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          <History sx={{ verticalAlign: "middle", mr: 1 }} />
+          Voting History
+        </Typography>
+        <Button
+          variant="outlined"
+          startIcon={<History />}
+          onClick={() => navigate("/voting-history")}
+        >
+          View Complete Voting History
+        </Button>
+      </Paper>
     </Box>
   );
 };
