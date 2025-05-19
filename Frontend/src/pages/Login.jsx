@@ -50,7 +50,11 @@ const Login = () => {
 
     try {
       await login(formData.email, formData.password, selectedRole);
-      navigate("/");
+      if (selectedRole === "admin") {
+        navigate("../components/AdminDashboard.jsx");
+      } else {
+        navigate("../components/VoterDashboard.jsx");
+      }
     } catch (err) {
       setError(err.response?.data?.message || "An error occurred during login");
     } finally {

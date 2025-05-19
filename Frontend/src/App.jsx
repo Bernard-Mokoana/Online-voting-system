@@ -15,7 +15,6 @@ import Navigation from "./components/Navigation";
 // Lazy load pages
 const Login = React.lazy(() => import("./pages/Login"));
 const Register = React.lazy(() => import("./pages/Register"));
-const Dashboard = React.lazy(() => import("./pages/Dashboard"));
 const Profile = React.lazy(() => import("./pages/Profile"));
 const Users = React.lazy(() => import("./pages/Users"));
 const Elections = React.lazy(() => import("./pages/Elections"));
@@ -86,7 +85,6 @@ function AppRoutes() {
             <Route path="/role-selection" element={<RoleSelection />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/dashboard" element={<Dashboard />} />
             <Route
               path="/profile"
               element={
@@ -108,6 +106,22 @@ function AppRoutes() {
               element={
                 <ProtectedRoute>
                   <Elections />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/voter-dashboard"
+              element={
+                <ProtectedRoute>
+                  <VoterDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin-dashboard"
+              element={
+                <ProtectedRoute>
+                  <AdminDashboard />
                 </ProtectedRoute>
               }
             />

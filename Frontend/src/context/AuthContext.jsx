@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "../api/axios";
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     // Check for stored token and user data
