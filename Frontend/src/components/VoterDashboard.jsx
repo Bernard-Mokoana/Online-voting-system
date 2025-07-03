@@ -22,7 +22,6 @@ import {
   Info,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 
 const VoterDashboard = () => {
   const navigate = useNavigate();
@@ -43,35 +42,35 @@ const VoterDashboard = () => {
       CandidateID: 1,
       FirstName: "John",
       LastName: "Doe",
-      Party: "Democratic",
       Votes: 120,
     },
     {
       CandidateID: 2,
       FirstName: "Jane",
       LastName: "Smith",
-      Party: "Republican",
       Votes: 150,
     },
   ];
 
-  const mockUser = {
+  const mockVoter = {
     firstname: "Alice",
     hasVoted: false,
   };
 
-  const [activeElections, setActiveElections] = useState([]);
-  const [candidates, setCandidates] = useState([]);
-  const [user, setUser] = useState({});
+  const [activeElections, setActiveElections] = useState(mockActiveElections);
+  const [candidates, setCandidates] = useState(mockCandidates);
+  const [voter, setVoter] = useState(mockVoter);
   const [view, setView] = useState("vote");
   const [selectedCandidate, setSelectedCandidate] = useState("");
   const [message, setMessage] = useState({ text: "", severity: "info" });
 
+  // Commented out backend fetch logic for now
+  /*
   useEffect(() => {
     const fetchData = async () => {
       try {
         // Fetch data from the backend
-        const [electionsRes, candidatesRes, userRes] = await Promise.all([
+        const [electionsRes, candidatesRes, voterRes] = await Promise.all([
           axios.get("/api/elections/active"),
           axios.get("/api/candidates"),
           axios.get("/api/voters"),
@@ -83,13 +82,13 @@ const VoterDashboard = () => {
         setCandidates(
           Array.isArray(candidatesRes.data) ? candidatesRes.data : []
         );
-        setUser(userRes.data || {});
+        setVoter(voterRes.data || {});
       } catch (error) {
         console.error("Backend error:", error);
         // Fallback to mock data
         setActiveElections(mockActiveElections);
         setCandidates(mockCandidates);
-        setUser(mockUser);
+        setVoter(mockVoter);
         setMessage({
           text: "Unable to fetch data from the server. Using fallback data.",
           severity: "warning",
@@ -99,6 +98,7 @@ const VoterDashboard = () => {
 
     fetchData();
   }, []);
+  */
 
   const handleVote = () => {
     if (!selectedCandidate) return;
@@ -122,7 +122,7 @@ const VoterDashboard = () => {
       )}
 
       <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
-        Welcome, {user.firstname || "User"}!
+        Welcome, {voter.firstname || "Voter"}!
       </Typography>
 
       {view === "vote" ? (
@@ -146,7 +146,7 @@ const VoterDashboard = () => {
                   value={candidate.CandidateID.toString()}
                   control={<Radio />}
                   label={`${candidate.FirstName} ${candidate.LastName} (${candidate.Party})`}
-                  disabled={user.hasVoted}
+                  disabled={voter.hasVoted}
                 />
               ))}
             </RadioGroup>
@@ -157,10 +157,10 @@ const VoterDashboard = () => {
               variant="contained"
               startIcon={<HowToVote />}
               onClick={handleVote}
-              disabled={!selectedCandidate || user.hasVoted}
+              disabled={!selectedCandidate || voter.hasVoted}
               fullWidth
             >
-              {user.hasVoted ? "Already Voted" : "Submit Vote"}
+              {voter.hasVoted ? "Already Voted" : "Submit Vote"}
             </Button>
             <Button
               variant="outlined"
@@ -255,7 +255,7 @@ const VoterDashboard = () => {
                     >
                       Details
                     </Button>
-                    {!user.hasVoted && (
+                    {!voter.hasVoted && (
                       <Button
                         size="small"
                         startIcon={<HowToVote />}

@@ -26,6 +26,7 @@
     "express-rate-limit": "^7.1.5",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
+    "lucid": "^2.21.0",
     "morgan": "^1.10.0",
     "online-voting-system-backend": "file:",
     "pg": "^8.16.0"

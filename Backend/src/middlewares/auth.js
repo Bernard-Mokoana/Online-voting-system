@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import pool from "../database/database.js";
 
 // Verify JWT token
-const authenticateToken = (req, res, next) => {
+export const authenticateToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
 
@@ -21,7 +21,7 @@ const authenticateToken = (req, res, next) => {
 };
 
 // Role-based authorization
-const authorizeRole = (roles) => {
+export const authorizeRole = (roles) => {
   return async (req, res, next) => {
     try {
       let userRole;
@@ -54,7 +54,7 @@ const authorizeRole = (roles) => {
 };
 
 // Verify email middleware
-const verifyEmail = async (req, res, next) => {
+export const verifyEmail = async (req, res, next) => {
   try {
     const result = await pool.query(
       "SELECT is_verified FROM users WHERE id = $1",
@@ -79,27 +79,28 @@ const verifyEmail = async (req, res, next) => {
 };
 
 // Rate limiting middleware
-import { rateLimit } from "express-rate-limit";
+export const rateLimit = require("express-rate-limit");
 
-const loginLimiter = rateLimit({
+
+export const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 attempts
   message: "Too many login attempts, please try again after 15 minutes",
 });
 
-const registerLimiter = rateLimit({
+export const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 3, // 3 attempts
   message: "Too many registration attempts, please try again after 1 hour",
 });
 
-const voteLimiter = rateLimit({
+export const voteLimiter = rateLimit({
   windowMs: 24 * 60 * 60 * 1000, // 24 hours
   max: 1, // 1 vote per day
   message: "You can only vote once per day",
 });
 
-export {
+module.exports = {
   authenticateToken,
   authorizeRole,
   verifyEmail,
