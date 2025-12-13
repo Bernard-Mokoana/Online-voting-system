@@ -416,8 +416,8 @@ ON CONFLICT (TypeName) DO NOTHING;
 -- ============================================
 
 -- Grant select on views to public
--- GRANT SELECT ON ElectionResults TO PUBLIC;
--- GRANT SELECT ON VoterStatistics TO PUBLIC;
+GRANT SELECT ON ElectionResults TO PUBLIC;
+GRANT SELECT ON VoterStatistics TO PUBLIC;
 -- ============================================
 -- Comments for Documentation
 -- ============================================
