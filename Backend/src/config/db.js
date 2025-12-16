@@ -46,7 +46,6 @@ const { Pool } = pg;
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  // Add these if you have SSL issues:
   ssl:
     process.env.NODE_ENV === "production"
       ? { rejectUnauthorized: false }

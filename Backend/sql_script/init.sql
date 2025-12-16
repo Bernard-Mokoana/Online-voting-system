@@ -1,11 +1,4 @@
--- ============================================
--- Online Voting System Database Schema
--- ============================================
--- Database: OnlineVotingSystem
--- Description: Complete schema for online voting system
--- ============================================
-
--- Drop existing tables if they exist (in reverse order of dependencies)
+-- Active: 1739611791945@@127.0.0.1@5432@Online voting system@public
 DROP TABLE IF EXISTS VoterAuditLog CASCADE;
 DROP TABLE IF EXISTS AdminAuditLog CASCADE;
 DROP TABLE IF EXISTS Vote CASCADE;
