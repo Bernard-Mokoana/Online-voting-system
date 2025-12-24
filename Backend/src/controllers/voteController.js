@@ -1,4 +1,4 @@
-import pool from "../database/database.js";
+import pool from "../config/db.js";
 
 export const castVote = async (req, res) => {
   try {

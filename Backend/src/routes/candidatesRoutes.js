@@ -1,15 +1,18 @@
 import express from "express";
 import {
+  registerCandidate,
   getCandidates,
   getCandidateById,
+  updateCandidate,
+  deleteCandidate,
 } from "../controllers/candidateController.js";
 
-const router = express.Router();
+const candidateRouter = express.Router();
 
-// Route to get all candidates
-router.get("/", getCandidates);
+candidateRouter.post("/register", registerCandidate);
+candidateRouter.get("/", getCandidates);
+candidateRouter.get("/:id", getCandidateById);
+candidateRouter.put("/", updateCandidate);
+candidateRouter.delete("/", deleteCandidate);
 
-// Route to get a specific candidate by ID
-router.get("/:id", getCandidateById);
-
-export default router;
+export default candidateRouter;

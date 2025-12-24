@@ -1,25 +1,28 @@
 import express from "express";
-import { createVoter, getAllVoters } from "../models/voterModel.js";
-const router = express.Router();
+import {
+  registerUser,
+  getVoterById,
+  updateVoter,
+  deleteAccount,
+} from "../controllers/voterController.js";
+import {
+  authenticateToken,
+  authorizeRole,
+  verifyEmail,
+} from "../middlewares/auth.js";
 
-router.post("/", async (req, res) => {
-  try {
-    const voter = await createVoter(req.body);
-    res.status(201).json(voter);
-  } catch (err) {
-    console.error(err);
-    res.status(400).json({ error: "Failed to create voter" });
-  }
-});
+const voterRoutes = express.Router();
 
-router.get("/", async (req, res) => {
-  try {
-    const voters = await getAllVoters();
-    res.json(voters);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to retrieve voters" });
-  }
-});
+voterRoutes.post("/register", registerUser);
 
-export default router;
+voterRoutes.get("/profile/:voterId", authenticateToken, getVoterById);
+voterRoutes.put("/profile", updateVoter);
+voterRoutes.delete("/account", authenticateToken, deleteAccount);
+
+// voterRouter.get(
+//   "/voting-history",
+//   authenticateToken,
+//   userController.getVotingHistory
+// );
+
+export default voterRoutes;

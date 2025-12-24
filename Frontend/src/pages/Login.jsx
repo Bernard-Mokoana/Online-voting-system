@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import {
   Container,
   Paper,
@@ -9,32 +9,18 @@ import {
   Box,
   Alert,
   CircularProgress,
-  Divider,
 } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
-import PersonAddIcon from "@mui/icons-material/PersonAdd";
 
 const Login = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { login } = useAuth();
   const [formData, setFormData] = useState({
-    usernameOrEmail: "",
+    email: "",
     password: "",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [selectedRole, setSelectedRole] = useState("");
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const role = params.get("role");
-    if (role) {
-      setSelectedRole(role);
-    } else {
-      navigate("/role-selection");
-    }
-  }, [location, navigate]);
 
   const handleChange = (e) => {
     setFormData({
@@ -49,26 +35,13 @@ const Login = () => {
     setLoading(true);
 
     try {
-      if (selectedRole === "admin") {
-        await login(formData.usernameOrEmail, formData.password, "admin");
-        navigate("/admin-dashboard");
-      } else {
-        await login(formData.usernameOrEmail, formData.password, "voter");
-        navigate("/voter-dashboard");
-      }
+      await login(formData.email, formData.password);
+      navigate("/voter-dashboard");
     } catch (err) {
-      setError(err.response?.data?.message || "An error occurred during login");
+      setError(err.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleRegister = () => {
-    navigate(`/register?role=${selectedRole}`);
-  };
-
-  const handleRoleChange = () => {
-    navigate("/role-selection");
   };
 
   return (
@@ -76,8 +49,7 @@ const Login = () => {
       <Box sx={{ mt: 8, mb: 4 }}>
         <Paper elevation={3} sx={{ p: 4 }}>
           <Typography variant="h4" component="h1" align="center" gutterBottom>
-            Login as{" "}
-            {selectedRole.charAt(0).toUpperCase() + selectedRole.slice(1)}
+            Voter Login
           </Typography>
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
@@ -87,10 +59,10 @@ const Login = () => {
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
-              label={selectedRole === "admin" ? "Username" : "Email"}
-              name="usernameOrEmail"
-              type={selectedRole === "admin" ? "text" : "email"}
-              value={formData.usernameOrEmail}
+              label="Email"
+              name="email"
+              type="email"
+              value={formData.email}
               onChange={handleChange}
               margin="normal"
               required
@@ -118,31 +90,19 @@ const Login = () => {
             </Button>
           </form>
 
-          <Box sx={{ mt: 3, mb: 2 }}>
-            <Divider>
-              <Typography color="text.secondary" variant="body2">
-                OR
-              </Typography>
-            </Divider>
+          <Box sx={{ mt: 3, textAlign: "center" }}>
+            <Typography variant="body2">
+              Don't have an account?{" "}
+              <Link to="/register" style={{ textDecoration: "none" }}>
+                <Button color="primary">Register</Button>
+              </Link>
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              <Link to="/admin-login" style={{ textDecoration: "none" }}>
+                <Button color="secondary">Admin Login</Button>
+              </Link>
+            </Typography>
           </Box>
-
-          {selectedRole === "voter" && (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <Button
-                fullWidth
-                variant="outlined"
-                color="primary"
-                size="large"
-                startIcon={<PersonAddIcon />}
-                onClick={handleRegister}
-              >
-                Create New Voter Account
-              </Button>
-              <Button color="primary" onClick={handleRoleChange}>
-                Change Role
-              </Button>
-            </Box>
-          )}
         </Paper>
       </Box>
     </Container>

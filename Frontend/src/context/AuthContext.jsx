@@ -8,43 +8,57 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    // Check for stored token and user data
     const token = localStorage.getItem("token");
     const storedUser = localStorage.getItem("user");
 
     if (token && storedUser) {
       setUser(JSON.parse(storedUser));
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     }
 
     setLoading(false);
   }, []);
 
-  const login = async (email, password, role) => {
-    const response = await axios.post("/api/auth/login", {
+  const login = async (email, password) => {
+    const response = await axios.post("/auth/login", {
       email,
       password,
-      role,
     });
-    const { token, user } = response.data;
+    const { accessToken, user } = response.data;
 
-    localStorage.setItem("token", token);
+    localStorage.setItem("token", accessToken);
     localStorage.setItem("user", JSON.stringify(user));
-    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     setUser(user);
 
     return user;
   };
 
+  const adminLogin = async (username, password) => {
+    const response = await axios.post("/admin/login", {
+      username,
+      password,
+    });
+    const { token, admin } = response.data;
+
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(admin));
+    setUser(admin);
+
+    return admin;
+  };
+
   const register = async (userData) => {
-    const response = await axios.post("/api/auth/register", userData);
+    const response = await axios.post("/voters/register", userData);
     return response.data;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await axios.post("/auth/logout");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    delete axios.defaults.headers.common["Authorization"];
     setUser(null);
   };
 
@@ -52,6 +66,7 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     login,
+    adminLogin,
     register,
     logout,
   };

@@ -1,159 +1,248 @@
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import pool from "../config/db";
+import pool from "../config/db.js";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 export const registerUser = async (req, res) => {
   try {
-    const { email, password, role } = req.body;
+    const {
+      firstName,
+      lastName,
+      email,
+      idNumber,
+      dataOfBirth,
+      phoneNumber,
+      password,
+    } = req.body;
 
-    if (!email || !password || !role)
+    if (
+      !firstName ||
+      !lastName ||
+      !email ||
+      !idNumber ||
+      !dataOfBirth ||
+      !phoneNumber ||
+      !password
+    )
       return res
         .status(400)
         .json({ success: false, error: "All fields are required" });
 
-    const existing = await pool.query(`SELECT id FROM users WHERE email = $1`, [
-      email,
-    ]);
+    const existing = await pool.query(
+      `SELECT "voterid" FROM voter WHERE "email" = $1`,
+      [email]
+    );
     if (existing.rows.length > 0)
       return res
         .status(409)
-        .json({ success: false, error: "User already exists" });
+        .json({ success: false, error: "Voter already exists" });
 
-    const saltRound = 12;
-
-    const hashedPassword = await bcrypt.hash(password, saltRound);
+    const hashedPassword = await bcrypt.hash(
+      password,
+      parseInt(process.env.HASH_SALT) || 10
+    );
 
     const newUser = await pool.query(
-      `INSERT INTO users (email, passwordhash, role) VALUES ($1, $2, $3) RETURNING id, email, role`,
-      [email, hashedPassword, role]
+      `INSERT INTO voter("firstname", "lastname", "email", "idnumber", "dateofbirth", "phonenumber", "password") 
+      VALUES ($1, $2, $3, $4, $5, $6, $7) 
+      RETURNING "voterid", "firstname", "lastname", "email", "idnumber", "dateofbirth", "phonenumber"`,
+      [
+        firstName,
+        lastName,
+        email,
+        idNumber,
+        dataOfBirth,
+        phoneNumber,
+        hashedPassword,
+      ]
     );
 
-    const token = jwt.sign(
-      { id: newUser.rows[0].id, role: newUser.rows[0].role },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
-      token,
-      user: newUser.rows[0],
+      message: "Voter created successfully",
+      data: newUser.rows[0],
     });
   } catch (err) {
     console.error("Registration error:", err);
-    res.status(500).json({ success: false, error: "Registration failed" });
+    return res
+      .status(500)
+      .json({ success: false, error: "Registration failed" });
   }
 };
 
-// const userController = {
-//   // Get user profile
-//   getProfile: async (req, res) => {
-//     try {
-//       const result = await pool.query(
-//         `SELECT id, first_name, last_name, email, id_number,
-//          date_of_birth, phone_number, role, created_at
-//          FROM users WHERE id = $1`,
-//         [req.user.id]
-//       );
+export const getVoterById = async (req, res) => {
+  const { voterId } = req.params;
+  try {
+    const result = await pool.query(
+      `SELECT * FROM voter WHERE "voterid" = $1`,
+      [voterId]
+    );
 
-//       if (result.rows.length === 0) {
-//         return res.status(404).json({ message: "User not found" });
-//       }
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: "Voter not found" });
+    }
 
-//       res.json(result.rows[0]);
-//     } catch (error) {
-//       console.error("Profile fetch error:", error);
-//       res.status(500).json({ message: "Internal server error" });
-//     }
-//   },
+    return res.status(200).json({
+      success: true,
+      message: "Voter fetched successfully",
+      data: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Profile fetch error: ", error);
+    return res
+      .status(500)
+      .json({ success: false, error: "Internal server error" });
+  }
+};
 
-//   // Update user profile
-//   updateProfile: async (req, res) => {
-//     try {
-//       const { firstName, lastName, phoneNumber, currentPassword, newPassword } =
-//         req.body;
+export const getAllVoters = async (req, res) => {
+  try {
+    const voters = await pool.query(`
+      SELECT "voterid", "firstname", "lastname", "email", "idnumber", "dateofbirth", "phonenumber", "hasvoted", "isverified", "createdat"
+      FROM voter
+    `);
 
-//       // If updating password, verify current password
-//       if (newPassword) {
-//         const user = await pool.query(
-//           "SELECT password FROM users WHERE id = $1",
-//           [req.user.id]
-//         );
+    return res.status(200).json({
+      success: true,
+      message: "Voters fetched successfully",
+      data: voters.rows,
+    });
+  } catch (error) {
+    console.error("Voters fetch error:", error);
+    return res
+      .status(500)
+      .json({ success: false, error: "Internal server error" });
+  }
+};
 
-//         if (!(await bcrypt.compare(currentPassword, user.rows[0].password))) {
-//           return res
-//             .status(401)
-//             .json({ message: "Current password is incorrect" });
-//         }
+export const updateVoter = async (req, res) => {
+  try {
+    const {
+      firstName,
+      lastName,
+      email,
+      phoneNumber,
+      currentPassword,
+      newPassword,
+    } = req.body;
 
-//         const hashedPassword = await bcrypt.hash(newPassword, 10);
-//         await pool.query("UPDATE users SET password = $1 WHERE id = $2", [
-//           hashedPassword,
-//           req.user.id,
-//         ]);
-//       }
+    const voterId = req.user?.voterId || req.voter?.id;
+    if (!voterId) {
+      return res.status(401).json({ success: false, error: "Unauthorized" });
+    }
 
-//       // Update other profile fields
-//       await pool.query(
-//         `UPDATE users
-//          SET first_name = COALESCE($1, first_name),
-//              last_name = COALESCE($2, last_name),
-//              phone_number = COALESCE($3, phone_number)
-//          WHERE id = $4`,
-//         [firstName, lastName, phoneNumber, req.user.id]
-//       );
+    const voter = await pool.query(
+      `SELECT "password" FROM voter WHERE "voterid" = $1`,
+      [voterId]
+    );
 
-//       // Log profile update
-//       await pool.query(
-//         `INSERT INTO audit_logs (user_id, action, ip_address)
-//          VALUES ($1, $2, $3)`,
-//         [req.user.id, "profile_update", req.ip]
-//       );
+    if (voter.rows.length === 0) {
+      return res.status(404).json({ success: false, error: "Voter not found" });
+    }
 
-//       res.json({ message: "Profile updated successfully" });
-//     } catch (error) {
-//       console.error("Profile update error:", error);
-//       res.status(500).json({ message: "Internal server error" });
-//     }
-//   },
+    if (newPassword && currentPassword) {
+      const isMatch = await bcrypt.compare(
+        currentPassword,
+        voter.rows[0].password
+      );
 
-//   // Delete user account
-//   deleteAccount: async (req, res) => {
-//     try {
-//       const { password } = req.body;
+      if (!isMatch) {
+        return res
+          .status(401)
+          .json({ success: false, error: "Current password is incorrect" });
+      }
 
-//       // Verify password before deletion
-//       const user = await pool.query(
-//         "SELECT password FROM users WHERE id = $1",
-//         [req.user.id]
-//       );
+      const hashedPassword = await bcrypt.hash(
+        newPassword,
+        parseInt(process.env.HASH_SALT) || 10
+      );
 
-//       if (!(await bcrypt.compare(password, user.rows[0].password))) {
-//         return res.status(401).json({ message: "Password is incorrect" });
-//       }
+      await pool.query(
+        `UPDATE voter SET "password" = $1 WHERE "voterid" = $2`,
+        [hashedPassword, voterId]
+      );
+    }
 
-//       // Delete user's votes
-//       await pool.query("DELETE FROM votes WHERE user_id = $1", [req.user.id]);
+    if (firstName || lastName || email || phoneNumber) {
+      await pool.query(
+        `UPDATE voter
+         SET "firstname" = COALESCE($1, "firstname"),
+             "lastname" = COALESCE($2, "lastname"),
+             "email" = COALESCE($3, "email"),
+             "phonenumber" = COALESCE($4, "phonenumber")
+         WHERE "voterid" = $5`,
+        [firstName, lastName, email, phoneNumber, voterId]
+      );
+    }
 
-//       // Delete user's verification tokens
-//       await pool.query("DELETE FROM verification_tokens WHERE user_id = $1", [
-//         req.user.id,
-//       ]);
+    try {
+      await pool.query(
+        `INSERT INTO "VoterAuditLog" ("VoterID", "ActionType", "ActionDetails")
+         VALUES ($1, $2, $3)`,
+        [
+          voterId,
+          "profile_update",
+          `Profile updated at ${new Date().toISOString()}`,
+        ]
+      );
+    } catch (auditError) {
+      console.error("Audit log error:", auditError);
+    }
 
-//       // Delete user's audit logs
-//       await pool.query("DELETE FROM audit_logs WHERE user_id = $1", [
-//         req.user.id,
-//       ]);
+    return res.json({ success: true, message: "Profile updated successfully" });
+  } catch (error) {
+    console.error("Profile update error:", error);
+    return res
+      .status(500)
+      .json({ success: false, error: "Internal server error" });
+  }
+};
 
-//       // Delete user
-//       await pool.query("DELETE FROM users WHERE id = $1", [req.user.id]);
+export const deleteAccount = async (req, res) => {
+  try {
+    const { password } = req.body;
 
-//       res.json({ message: "Account deleted successfully" });
-//     } catch (error) {
-//       console.error("Account deletion error:", error);
-//       res.status(500).json({ message: "Internal server error" });
-//     }
-//   },
+    const voterId = req.user?.voterId || req.voter?.id;
+    if (!voterId) {
+      return res.status(401).json({ success: false, error: "Unauthorized" });
+    }
+
+    const voterPassword = await pool.query(
+      `SELECT "password" FROM voter WHERE "voterid" = $1`,
+      [voterId]
+    );
+
+    if (voterPassword.rows.length === 0) {
+      return res.status(404).json({ success: false, error: "Voter not found" });
+    }
+
+    const comparedPasswords = await bcrypt.compare(
+      password,
+      voterPassword.rows[0].password
+    );
+
+    if (!comparedPasswords) {
+      return res
+        .status(401)
+        .json({ success: false, error: "Password is incorrect" });
+    }
+
+    await pool.query(`DELETE FROM "Vote" WHERE "VoterID" = $1`, [voterId]);
+    await pool.query(`DELETE FROM "VoterAuditLog" WHERE "VoterID" = $1`, [
+      voterId,
+    ]);
+
+    await pool.query(`DELETE FROM voter WHERE "voterid" = $1`, [voterId]);
+
+    return res.json({ success: true, message: "Account deleted successfully" });
+  } catch (error) {
+    console.error("Account deletion error:", error);
+    return res
+      .status(500)
+      .json({ success: false, error: "Internal server error" });
+  }
+};
 
 //   // Get user's voting history
 //   getVotingHistory: async (req, res) => {
@@ -174,93 +263,3 @@ export const registerUser = async (req, res) => {
 //       res.status(500).json({ message: "Internal server error" });
 //     }
 //   },
-
-//   // Admin: Get all users
-//   getAllUsers: async (req, res) => {
-//     try {
-//       const { page = 1, limit = 10, role, search } = req.query;
-//       const offset = (page - 1) * limit;
-
-//       let query = `
-//         SELECT id, first_name, last_name, email, id_number,
-//                date_of_birth, phone_number, role, created_at
-//         FROM users
-//         WHERE 1=1
-//       `;
-//       const queryParams = [];
-
-//       if (role) {
-//         queryParams.push(role);
-//         query += ` AND role = $${queryParams.length}`;
-//       }
-
-//       if (search) {
-//         queryParams.push(`%${search}%`);
-//         query += ` AND (
-//           first_name ILIKE $${queryParams.length} OR
-//           last_name ILIKE $${queryParams.length} OR
-//           email ILIKE $${queryParams.length} OR
-//           id_number ILIKE $${queryParams.length}
-//         )`;
-//       }
-
-//       query += ` ORDER BY created_at DESC LIMIT $${
-//         queryParams.length + 1
-//       } OFFSET $${queryParams.length + 2}`;
-//       queryParams.push(limit, offset);
-
-//       const result = await pool.query(query, queryParams);
-
-//       // Get total count for pagination
-//       const countQuery = query
-//         .replace(/SELECT.*FROM/, "SELECT COUNT(*) FROM")
-//         .split("ORDER BY")[0];
-//       const countResult = await pool.query(
-//         countQuery,
-//         queryParams.slice(0, -2)
-//       );
-
-//       res.json({
-//         users: result.rows,
-//         total: parseInt(countResult.rows[0].count),
-//         page: parseInt(page),
-//         totalPages: Math.ceil(countResult.rows[0].count / limit),
-//       });
-//     } catch (error) {
-//       console.error("Users fetch error:", error);
-//       res.status(500).json({ message: "Internal server error" });
-//     }
-//   },
-
-//   // Admin: Update user role
-//   updateUserRole: async (req, res) => {
-//     try {
-//       const { userId } = req.params;
-//       const { role } = req.body;
-
-//       await pool.query("UPDATE users SET role = $1 WHERE id = $2", [
-//         role,
-//         userId,
-//       ]);
-
-//       // Log role update
-//       await pool.query(
-//         `INSERT INTO audit_logs (user_id, action, details, ip_address)
-//          VALUES ($1, $2, $3, $4)`,
-//         [
-//           req.user.id,
-//           "role_update",
-//           { targetUserId: userId, newRole: role },
-//           req.ip,
-//         ]
-//       );
-
-//       res.json({ message: "User role updated successfully" });
-//     } catch (error) {
-//       console.error("Role update error:", error);
-//       res.status(500).json({ message: "Internal server error" });
-//     }
-//   },
-// };
-
-// export default userController;

@@ -1,220 +1,92 @@
-// import React, { Suspense } from "react";
-// import {
-//   BrowserRouter as Router,
-//   Routes,
-//   Route,
-//   Navigate,
-// } from "react-router-dom";
-// import { ThemeProvider, createTheme } from "@mui/material/styles";
-// import CssBaseline from "@mui/material/CssBaseline";
-// import CircularProgress from "@mui/material/CircularProgress";
-// import Box from "@mui/material/Box";
-// import { AuthProvider, useAuth } from "./context/AuthContext";
-// import Navigation from "./components/Navigation";
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
+import CssBaseline from "@mui/material/CssBaseline";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 
-// Lazy load pages
-// const Login = React.lazy(() => import("./pages/Login"));
-// const Register = React.lazy(() => import("./pages/Register"));
-// const Profile = React.lazy(() => import("./pages/Profile"));
-// const VoterDashboard = React.lazy(() => import("./components/VoterDashboard"));
-// const AdminDashboard = React.lazy(() => import("./components/AdminDashboard"));
-// const Users = React.lazy(() => import("./pages/Users"));
-// const Elections = React.lazy(() => import("./pages/Elections"));
-// const Candidates = React.lazy(() => import("./pages/Candidates"));
-// const VotingHistory = React.lazy(() => import("./pages/VotingHistory"));
-// const NotFound = React.lazy(() => import("./pages/NotFound"));
-// const ServerError = React.lazy(() => import("./pages/ServerError"));
-// const Maintenance = React.lazy(() => import("./pages/Maintenance"));
-// const Vote = React.lazy(() => import("./pages/Vote"));
-// const ElectionDetails = React.lazy(() => import("./pages/ElectionDetails"));
-// const ElectionResults = React.lazy(() => import("./pages/ElectionResults"));
-// const RoleSelection = React.lazy(() => import("./pages/RoleSelection"));
+// Pages
+import Login from "./pages/Login";
+import AdminLogin from "./pages/AdminLogin";
+import Register from "./pages/Register";
+import VoterDashboard from "./components/VoterDashboard";
+import AdminDashboard from "./components/AdminDashboard";
 
-// const theme = createTheme({
-//   palette: {
-//     mode: "light",
-//     primary: {
-//       main: "#1976d2",
-//     },
-//     secondary: {
-//       main: "#dc004e",
-//     },
-//   },
-// });
+const theme = createTheme({
+  palette: {
+    mode: "light",
+    primary: {
+      main: "#1976d2",
+    },
+    secondary: {
+      main: "#dc004e",
+    },
+  },
+});
 
 // Protected Route component
-// const ProtectedRoute = ({ children }) => {
-//   const { user, loading } = useAuth();
+const ProtectedRoute = ({ children }) => {
+  const { user } = useAuth();
 
-//   if (loading) {
-//     return (
-//       <Box
-//         display="flex"
-//         justifyContent="center"
-//         alignItems="center"
-//         minHeight="100vh"
-//       >
-//         <CircularProgress />
-//       </Box>
-//     );
-//   }
+  if (!user) {
+    return <Navigate to="/" />;
+  }
 
-//   if (!user) {
-//     return <Navigate to="/role-selection" />;
-//   }
+  return children;
+};
 
-//   return children;
-// };
+function AppRoutes() {
+  const { user } = useAuth();
 
-// function AppRoutes() {
-//   return (
-//     <>
-//       <Navigation />
-//       <Box sx={{ p: 3 }}>
-//         <Suspense
-//           fallback={
-//             <Box
-//               display="flex"
-//               justifyContent="center"
-//               alignItems="center"
-//               minHeight="100vh"
-//             >
-//               <CircularProgress />
-//             </Box>
-//           }
-//         >
-//           <Routes>
-//             <Route path="/role-selection" element={<RoleSelection />} />
-//             <Route path="/login" element={<Login />} />
-//             <Route path="/register" element={<Register />} />
-//             <Route
-//               path="/profile"
-//               element={
-//                 <ProtectedRoute>
-//                   <Profile />
-//                 </ProtectedRoute>
-//               }
-//             />
-//             <Route
-//               path="/users"
-//               element={
-//                 <ProtectedRoute>
-//                   <Users />
-//                 </ProtectedRoute>
-//               }
-//             />
-//             <Route
-//               path="/elections"
-//               element={
-//                 <ProtectedRoute>
-//                   <Elections />
-//                 </ProtectedRoute>
-//               }
-//             />
-//             <Route
-//               path="/voter-dashboard"
-//               element={
-//                 <ProtectedRoute>
-//                   <VoterDashboard />
-//                 </ProtectedRoute>
-//               }
-//             />
-//             <Route
-//               path="/admin-dashboard"
-//               element={
-//                 <ProtectedRoute>
-//                   <AdminDashboard />
-//                 </ProtectedRoute>
-//               }
-//             />
-//             <Route
-//               path="/elections/:electionId"
-//               element={
-//                 <ProtectedRoute>
-//                   <ElectionDetails />
-//                 </ProtectedRoute>
-//               }
-//             />
-//             <Route
-//               path="/elections/:electionId/vote"
-//               element={
-//                 <ProtectedRoute>
-//                   <Vote />
-//                 </ProtectedRoute>
-//               }
-//             />
-//             <Route
-//               path="/elections/:electionId/results"
-//               element={
-//                 <ProtectedRoute>
-//                   <ElectionResults />
-//                 </ProtectedRoute>
-//               }
-//             />
-//             <Route
-//               path="/candidates"
-//               element={
-//                 <ProtectedRoute>
-//                   <Candidates />
-//                 </ProtectedRoute>
-//               }
-//             />
-//             <Route
-//               path="/voting-history"
-//               element={
-//                 <ProtectedRoute>
-//                   <VotingHistory />
-//                 </ProtectedRoute>
-//               }
-//             />
-//             <Route path="/500" element={<ServerError />} />
-//             <Route path="/maintenance" element={<Maintenance />} />
-//             <Route path="/404" element={<NotFound />} />
-//             <Route
-//               path="./components/VoterDashboard.jsx"
-//               element={<VoterDashboard />}
-//             />
-//             <Route
-//               path="./components/AdminDashboard.jsx"
-//               element={<AdminDashboard />}
-//             />
-//             <Route path="/" element={<Navigate to="/role-selection" />} />
-//             <Route path="*" element={<NotFound />} />
-//           </Routes>
-//         </Suspense>
-//       </Box>
-//     </>
-//   );
-// }
-
-// function App() {
-//   return (
-//     <ThemeProvider theme={theme}>
-//       <CssBaseline />
-//       <AuthProvider>
-//         <Router>
-//           <AppRoutes />
-//           {/* <VoterDashboard />
-//           <AdminDashboard /> */}
-//         </Router>
-//       </AuthProvider>
-//     </ThemeProvider>
-//   );
-// }
-
-// export default App;
-
-import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import AdminDashboard from "./components/AdminDashboard";
+  return (
+    <Routes>
+      <Route
+        path="/"
+        element={
+          user ? (
+            <Navigate
+              to={
+                user.role === "admin" ? "/admin-dashboard" : "/voter-dashboard"
+              }
+            />
+          ) : (
+            <Login />
+          )
+        }
+      />
+      <Route path="/login" element={<Login />} />
+      <Route path="/admin-login" element={<AdminLogin />} />
+      <Route path="/register" element={<Register />} />
+      <Route
+        path="/voter-dashboard"
+        element={
+          <ProtectedRoute>
+            <VoterDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin-dashboard"
+        element={
+          <ProtectedRoute>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" />} />
+    </Routes>
+  );
+}
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/adminDashboard" element />
-      </Routes>
-    </BrowserRouter>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <AuthProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

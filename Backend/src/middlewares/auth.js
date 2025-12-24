@@ -1,26 +1,34 @@
 import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
-import pool from "../database/database.js";
+import pool from "../config/db.js";
+import rateLimit from "express-rate-limit";
+import dotenv from "dotenv";
 
-// Verify JWT token
+dotenv.config();
 export const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
+  const authHeader = req.headers["authorization"] || "";
+  const [scheme, tokenFromHeader] = authHeader && authHeader.split(" ")[1];
+  const tokenFromCookie = req.cookies?.accessToken;
+
+  const token =
+    scheme === "Bearer" && tokenFromHeader ? tokenFromHeader : tokenFromCookie;
 
   if (!token) {
     return res.status(401).json({ message: "Authentication required" });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({ message: "Invalid or expired token" });
-    }
-    req.user = user;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = { id: decoded.id, email: decoded.email };
     next();
-  });
+  } catch (error) {
+    const msg =
+      error.name === "TokenExpiredError"
+        ? "Access token expired"
+        : "Invalid token";
+    return res.status(500).json({ message: msg });
+  }
 };
 
-// Role-based authorization
 export const authorizeRole = (roles) => {
   return async (req, res, next) => {
     try {
@@ -53,7 +61,6 @@ export const authorizeRole = (roles) => {
   };
 };
 
-// Verify email middleware
 export const verifyEmail = async (req, res, next) => {
   try {
     const result = await pool.query(
@@ -78,10 +85,6 @@ export const verifyEmail = async (req, res, next) => {
   }
 };
 
-// Rate limiting middleware
-export const rateLimit = require("express-rate-limit");
-
-
 export const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 attempts
@@ -99,12 +102,3 @@ export const voteLimiter = rateLimit({
   max: 1, // 1 vote per day
   message: "You can only vote once per day",
 });
-
-module.exports = {
-  authenticateToken,
-  authorizeRole,
-  verifyEmail,
-  loginLimiter,
-  registerLimiter,
-  voteLimiter,
-};

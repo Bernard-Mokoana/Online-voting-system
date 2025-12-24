@@ -1,4 +1,4 @@
--- Active: 1739611791945@@127.0.0.1@5432@Online voting system@public
+-- Active: 1739611791945@@127.0.0.1@5432@OnlineVotingSystem
 DROP TABLE IF EXISTS VoterAuditLog CASCADE;
 DROP TABLE IF EXISTS AdminAuditLog CASCADE;
 DROP TABLE IF EXISTS Vote CASCADE;
@@ -9,10 +9,7 @@ DROP TABLE IF EXISTS Voter CASCADE;
 DROP TABLE IF EXISTS Address CASCADE;
 DROP TABLE IF EXISTS Admin CASCADE;
 
--- ============================================
--- Table: Address
--- Description: Stores address information for voters
--- ============================================
+DROP TABLE IF EXISTS refreshToken CASCADE;
 CREATE TABLE Address (
     AddressID SERIAL PRIMARY KEY,
     Country VARCHAR(100) NOT NULL,
@@ -24,10 +21,6 @@ CREATE TABLE Address (
     UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ============================================
--- Table: Admin
--- Description: Stores administrator account information
--- ============================================
 CREATE TABLE Admin (
     AdminID SERIAL PRIMARY KEY,
     Username VARCHAR(50) UNIQUE NOT NULL,
@@ -36,11 +29,9 @@ CREATE TABLE Admin (
     UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ============================================
--- Table: Voter
--- Description: Stores voter information and credentials
--- ============================================
-CREATE TABLE Voter (
+
+;
+CREATE TABLE voter (
     VoterID SERIAL PRIMARY KEY,
     FirstName VARCHAR(100) NOT NULL,
     LastName VARCHAR(100) NOT NULL,
@@ -60,10 +51,6 @@ CREATE TABLE Voter (
         ON UPDATE CASCADE
 );
 
--- ============================================
--- Table: ElectionType
--- Description: Stores different types of elections
--- ============================================
 CREATE TABLE ElectionType (
     ElectionTypeID SERIAL PRIMARY KEY,
     TypeName VARCHAR(100) UNIQUE NOT NULL,
@@ -72,10 +59,6 @@ CREATE TABLE ElectionType (
     UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ============================================
--- Table: Election
--- Description: Stores election information
--- ============================================
 CREATE TABLE Election (
     ElectionID SERIAL PRIMARY KEY,
     ElectionTypeID INTEGER NOT NULL,
@@ -98,10 +81,6 @@ CREATE TABLE Election (
     CONSTRAINT chk_election_dates CHECK (EndDate > StartDate)
 );
 
--- ============================================
--- Table: Candidate
--- Description: Stores candidate information for elections
--- ============================================
 CREATE TABLE Candidate (
     CandidateID SERIAL PRIMARY KEY,
     FirstName VARCHAR(100) NOT NULL,
@@ -118,10 +97,6 @@ CREATE TABLE Candidate (
         ON UPDATE CASCADE
 );
 
--- ============================================
--- Table: Vote
--- Description: Stores voting records
--- ============================================
 CREATE TABLE Vote (
     VoteID SERIAL PRIMARY KEY,
     VoterID INTEGER NOT NULL,
@@ -143,10 +118,7 @@ CREATE TABLE Vote (
     CONSTRAINT unique_voter_election UNIQUE (VoterID, ElectionID)
 );
 
--- ============================================
--- Table: AdminAuditLog
--- Description: Logs all admin actions for audit trail
--- ============================================
+
 CREATE TABLE AdminAuditLog (
     AuditLogID SERIAL PRIMARY KEY,
     AdminID INTEGER NOT NULL,
@@ -159,10 +131,6 @@ CREATE TABLE AdminAuditLog (
         ON UPDATE CASCADE
 );
 
--- ============================================
--- Table: VoterAuditLog
--- Description: Logs all voter actions for audit trail
--- ============================================
 CREATE TABLE VoterAuditLog (
     AuditLogID SERIAL PRIMARY KEY,
     VoterID INTEGER NOT NULL,
@@ -175,11 +143,43 @@ CREATE TABLE VoterAuditLog (
         ON UPDATE CASCADE
 );
 
--- ============================================
--- Indexes for Performance Optimization
--- ============================================
 
--- Address indexes
+CREATE TABLE refreshToken (
+    refreshTokenID SERIAL PRIMARY KEY,
+    voterID INTEGER REFERENCES "voter"(voterID) NOT NULL,
+    candidateID INTEGER REFERENCES "candidate"(candidateID) NOT NULL,
+    token TEXT NOT NULL,
+    isActive BOOLEAN DEFAULT TRUE,
+    expiresAt TIMESTAMP,
+    createdAt TIMESTAMP DEFAULT NOW(),
+    updatedAt TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE resetPasswordToken (
+    resetPasswordId SERIAL PRIMARY KEY,
+    voterID INTEGER REFERENCES "voter"(voterID) NOT NULL,
+    candidateID INTEGER REFERENCES "candidate"(candidateID) NOT NULL,
+    token TEXT NOT NULL,
+    isActive BOOLEAN DEFAULT TRUE,
+    expiredAt TIMESTAMP,
+    createdAt TIMESTAMP DEFAULT NOW(),
+    UpdatedAt TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE emailVerificationToken (
+    emailVerficationID SERIAL PRIMARY KEY,
+    voterID INTEGER REFERENCES "voter"(voterID) NOT NULL,
+    candidateID INTEGER REFERENCES "candidate"(candidateID) NOT NULL,
+    token TEXT NOT NULL,
+    isActive BOOLEAN DEFAULT TRUE,
+    expiredAt TIMESTAMP,
+    createdAt TIMESTAMP DEFAULT NOW(),
+    UpdatedAt TIMESTAMP DEFAULT NOW()
+);
+
+
+
+
 CREATE INDEX idx_address_country ON Address(Country);
 CREATE INDEX idx_address_province ON Address(Province);
 CREATE INDEX idx_address_city ON Address(City);
@@ -191,13 +191,11 @@ CREATE INDEX idx_voter_address ON Voter(AddressID);
 CREATE INDEX idx_voter_verified ON Voter(IsVerified);
 CREATE INDEX idx_voter_hasvoted ON Voter(HasVoted);
 
--- Election indexes
 CREATE INDEX idx_election_type ON Election(ElectionTypeID);
 CREATE INDEX idx_election_admin ON Election(AdminID);
 CREATE INDEX idx_election_active ON Election(IsActive);
 CREATE INDEX idx_election_dates ON Election(StartDate, EndDate);
 
--- Candidate indexes
 CREATE INDEX idx_candidate_election ON Candidate(ElectionID);
 CREATE INDEX idx_candidate_idnumber ON Candidate(IdNumber);
 
