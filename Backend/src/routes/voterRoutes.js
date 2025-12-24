@@ -5,15 +5,13 @@ import {
   updateVoter,
   deleteAccount,
 } from "../controllers/voterController.js";
-import {
-  authenticateToken,
-  authorizeRole,
-  verifyEmail,
-} from "../middlewares/auth.js";
+import { verifyEmail } from "../controllers/authController.js";
+import { authenticateToken, authorizeRole } from "../middlewares/auth.js";
 
 const voterRoutes = express.Router();
 
 voterRoutes.post("/register", registerUser);
+voterRoutes.post("/verify-email", verifyEmail);
 
 voterRoutes.get("/profile/:voterId", authenticateToken, getVoterById);
 voterRoutes.put("/profile", updateVoter);

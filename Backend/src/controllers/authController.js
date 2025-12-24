@@ -25,12 +25,30 @@ export const loginUser = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Email and password are required" });
 
-    const user = await pool.query(
-      `SELECT * FROM voter WHERE voter.email = $1 UNION SELECT * FROM candidate WHERE candidate.email = $1`,
-      [email]
-    );
+    // Check voter first
+    let voterResult = await pool.query(`SELECT * FROM voter WHERE email = $1`, [
+      email,
+    ]);
 
-    if (user.rows.length === 0)
+    let user = null;
+    let isVoter = false;
+
+    if (voterResult.rows.length > 0) {
+      user = voterResult;
+      isVoter = true;
+    } else {
+      // Check candidate
+      const candidateResult = await pool.query(
+        `SELECT * FROM candidate WHERE email = $1`,
+        [email]
+      );
+      if (candidateResult.rows.length > 0) {
+        user = candidateResult;
+        isVoter = false;
+      }
+    }
+
+    if (!user || user.rows.length === 0)
       return res
         .status(404)
         .json({ success: false, message: "User not found" });
@@ -40,6 +58,11 @@ export const loginUser = async (req, res) => {
       return res
         .status(401)
         .json({ success: false, error: "Invalid credentials" });
+
+    // Check email verification status
+    const isVerified = isVoter
+      ? user.rows[0].IsVerified || user.rows[0].isverified || false
+      : false; // Candidates might not have IsVerified field yet
 
     const accessToken = signAccessToken(user);
 
@@ -56,15 +79,27 @@ export const loginUser = async (req, res) => {
 
     setRefreshCookie(res, refreshToken);
 
-    return res.status(200).json({
+    const response = {
       message: "Login successful",
       accessToken,
       user: {
-        id: user.rows[0].id,
-        email: user.rows[0].email,
-        // role: user.rows[0].role,
+        id:
+          user.rows[0].VoterID ||
+          user.rows[0].voterid ||
+          user.rows[0].CandidateID ||
+          user.rows[0].candidateid,
+        email: user.rows[0].email || user.rows[0].Email,
+        isVerified,
       },
-    });
+    };
+
+    // Add warning if email is not verified
+    if (!isVerified) {
+      response.warning =
+        "Please verify your email address to access all features.";
+    }
+
+    return res.status(200).json(response);
   } catch (err) {
     console.error("Login error:", err);
     return res
@@ -121,12 +156,9 @@ export const resetPassword = async (req, res) => {
     // }
 
     // For now, returning an error as this needs proper implementation
-    return res
-      .status(501)
-      .json({
-        message:
-          "Reset password functionality needs to be properly implemented",
-      });
+    return res.status(501).json({
+      message: "Reset password functionality needs to be properly implemented",
+    });
   } catch (error) {
     console.error("Reset password error:", error);
     return res.status(500).json({ message: "Internal server error" });
@@ -202,7 +234,8 @@ export const refreshToken = async (req, res) => {
 };
 
 export const verifyEmail = async (req, res) => {
-  const { token } = req.body;
+  // Accept token from query string (for email links) or request body
+  const token = req.query.token || req.body.token;
 
   if (!token) return res.status(400).json({ message: "Token is required" });
 
@@ -215,8 +248,10 @@ export const verifyEmail = async (req, res) => {
     return res.status(200).json({
       message: "Email verified successfully",
       user: {
-        id: user.VoterID || user.CandidateID,
-        email: user.Email,
+        id:
+          user.VoterID || user.CandidateID || user.voterid || user.candidateid,
+        email: user.Email || user.email,
+        isVerified: true,
       },
     });
   } catch (error) {

@@ -1,6 +1,8 @@
 import bcrypt from "bcrypt";
 import pool from "../config/db.js";
 import dotenv from "dotenv";
+import { generateEmailVerificationToken } from "../utils/token.utils.js";
+import { sendEmailVerification } from "../utils/email.utils.js";
 
 dotenv.config();
 
@@ -58,9 +60,25 @@ export const registerUser = async (req, res) => {
       ]
     );
 
+    const voterId = newUser.rows[0].voterid;
+
+    // Generate and send email verification token
+    try {
+      const verificationToken = await generateEmailVerificationToken(
+        voterId,
+        true
+      );
+      await sendEmailVerification(email, verificationToken);
+    } catch (emailError) {
+      // Log error but don't fail registration
+      console.error("Failed to send verification email:", emailError);
+      // Optionally, you might want to delete the user here if email is critical
+    }
+
     return res.status(201).json({
       success: true,
-      message: "Voter created successfully",
+      message:
+        "Voter created successfully. Please check your email to verify your account.",
       data: newUser.rows[0],
     });
   } catch (err) {

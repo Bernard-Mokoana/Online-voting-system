@@ -146,35 +146,50 @@ CREATE TABLE VoterAuditLog (
 
 CREATE TABLE refreshToken (
     refreshTokenID SERIAL PRIMARY KEY,
-    voterID INTEGER REFERENCES "voter"(voterID) NOT NULL,
-    candidateID INTEGER REFERENCES "candidate"(candidateID) NOT NULL,
+    voterID INTEGER REFERENCES "voter"(VoterID) ON DELETE CASCADE,
+    candidateID INTEGER REFERENCES "candidate"(CandidateID) ON DELETE CASCADE,
     token TEXT NOT NULL,
     isActive BOOLEAN DEFAULT TRUE,
     expiresAt TIMESTAMP,
     createdAt TIMESTAMP DEFAULT NOW(),
-    updatedAt TIMESTAMP DEFAULT NOW()
+    updatedAt TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT refreshToken_one_id_required 
+        CHECK (
+            ("voterid" IS NOT NULL AND "candidateid" IS NULL) OR 
+            ("voterid" IS NULL AND "candidateid" IS NOT NULL)
+        )
 );
 
 CREATE TABLE resetPasswordToken (
     resetPasswordId SERIAL PRIMARY KEY,
-    voterID INTEGER REFERENCES "voter"(voterID) NOT NULL,
-    candidateID INTEGER REFERENCES "candidate"(candidateID) NOT NULL,
+    voterID INTEGER REFERENCES "voter"(VoterID) ON DELETE CASCADE,
+    candidateID INTEGER REFERENCES "candidate"(CandidateID) ON DELETE CASCADE,
     token TEXT NOT NULL,
     isActive BOOLEAN DEFAULT TRUE,
     expiredAt TIMESTAMP,
     createdAt TIMESTAMP DEFAULT NOW(),
-    UpdatedAt TIMESTAMP DEFAULT NOW()
+    UpdatedAt TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT resetPasswordToken_one_id_required 
+        CHECK (
+            ("voterid" IS NOT NULL AND "candidateid" IS NULL) OR 
+            ("voterid" IS NULL AND "candidateid" IS NOT NULL)
+        )
 );
 
 CREATE TABLE emailVerificationToken (
     emailVerficationID SERIAL PRIMARY KEY,
-    voterID INTEGER REFERENCES "voter"(voterID) NOT NULL,
-    candidateID INTEGER REFERENCES "candidate"(candidateID) NOT NULL,
+    voterID INTEGER REFERENCES "voter"(VoterID) ON DELETE CASCADE,
+    candidateID INTEGER REFERENCES "candidate"(CandidateID) ON DELETE CASCADE,
     token TEXT NOT NULL,
     isActive BOOLEAN DEFAULT TRUE,
     expiredAt TIMESTAMP,
     createdAt TIMESTAMP DEFAULT NOW(),
-    UpdatedAt TIMESTAMP DEFAULT NOW()
+    UpdatedAt TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT emailVerificationToken_one_id_required 
+        CHECK (
+            ("voterid" IS NOT NULL AND "candidateid" IS NULL) OR 
+            ("voterid" IS NULL AND "candidateid" IS NOT NULL)
+        )
 );
 
 
@@ -183,8 +198,6 @@ CREATE TABLE emailVerificationToken (
 CREATE INDEX idx_address_country ON Address(Country);
 CREATE INDEX idx_address_province ON Address(Province);
 CREATE INDEX idx_address_city ON Address(City);
-
--- Voter indexes
 CREATE INDEX idx_voter_email ON Voter(Email);
 CREATE INDEX idx_voter_idnumber ON Voter(IdNumber);
 CREATE INDEX idx_voter_address ON Voter(AddressID);
@@ -422,6 +435,9 @@ COMMENT ON TABLE Candidate IS 'Candidates running in specific elections';
 COMMENT ON TABLE Vote IS 'Individual vote records linking voters to candidates';
 COMMENT ON TABLE AdminAuditLog IS 'Audit trail of all administrative actions';
 COMMENT ON TABLE VoterAuditLog IS 'Audit trail of all voter actions';
+COMMENT ON TABLE refreshToken IS 'Refresh tokens for authentication. Each token is associated with either a voter OR a candidate, not both.';
+COMMENT ON TABLE resetPasswordToken IS 'Password reset tokens. Each token is associated with either a voter OR a candidate, not both.';
+COMMENT ON TABLE emailVerificationToken IS 'Email verification tokens. Each token is associated with either a voter OR a candidate, not both.';
 
 -- ============================================
 -- Schema Creation Complete

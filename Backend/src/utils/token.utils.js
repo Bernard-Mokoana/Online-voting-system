@@ -130,14 +130,38 @@ async function rotateRefreshToken(oldDoc, user, req, res) {
 
 async function resetPasswordToken() {}
 
+async function generateEmailVerificationToken(userId, isVoter = true) {
+  const token = crypto.randomBytes(32).toString("hex");
+
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  if (isVoter) {
+    await pool.query(
+      `INSERT INTO "emailVerificationToken" ("voterID", "candidateID", token, "expiredAt", "createdAt", "updatedAt")
+       VALUES ($1, NULL, $2, $3, NOW(), NOW())`,
+      [userId, token, expiresAt]
+    );
+  } else {
+    await pool.query(
+      `INSERT INTO "emailVerificationToken" ("voterID", "candidateID", token, "expiredAt", "createdAt", "updatedAt")
+       VALUES (NULL, $1, $2, $3, NOW(), NOW())`,
+      [userId, token, expiresAt]
+    );
+  }
+
+  return token;
+}
+
 async function verifyEmailToken(token) {
   const client = await pool.connect();
 
   try {
     await client.query(`BEGIN`);
 
+    // Query with explicit column selection to ensure we get the right column names
     const tokenResult = await client.query(
-      `SELECT * FROM emailVerificationToken WHERE token = $1 AND isActive = TRUE AND "expiredAt" > NOW()`,
+      `SELECT "voterID", "candidateID", token, "isActive", "expiredAt" 
+       FROM "emailVerificationToken" 
+       WHERE token = $1 AND "isActive" = TRUE AND "expiredAt" > NOW()`,
       [token]
     );
 
@@ -148,38 +172,51 @@ async function verifyEmailToken(token) {
       return null;
     }
 
+    // PostgreSQL returns quoted identifiers as-is, unquoted as lowercase
+    // Since we used quoted identifiers in SELECT, we get the exact case
+    const voterId = tokenRecord.voterID;
+    const candidateId = tokenRecord.candidateID;
+
     // Update voter or candidate verification status
-    if (tokenRecord.voterID) {
-      await client.query(
-        `UPDATE voter SET "IsVerified" = TRUE WHERE "VoterID" = $1`,
-        [tokenRecord.voterID]
+    if (voterId) {
+      const updateResult = await client.query(
+        `UPDATE voter SET "IsVerified" = TRUE WHERE "VoterID" = $1 RETURNING *`,
+        [voterId]
       );
+
+      if (updateResult.rows.length === 0) {
+        await client.query(`ROLLBACK`);
+        console.error(`Voter with ID ${voterId} not found`);
+        return null;
+      }
     }
 
-    if (tokenRecord.candidateID) {
+    if (candidateId) {
       // Candidates might not have IsVerified field, adjust if needed
       // await client.query(
       //   `UPDATE candidate SET "IsVerified" = TRUE WHERE "CandidateID" = $1`,
-      //   [tokenRecord.candidateID]
+      //   [candidateId]
       // );
     }
 
+    // Mark token as inactive
     await client.query(
-      `UPDATE emailVerificationToken SET isActive = FALSE WHERE token = $1`,
+      `UPDATE "emailVerificationToken" SET "isActive" = FALSE WHERE token = $1`,
       [token]
     );
 
+    // Get the updated user
     let user;
-    if (tokenRecord.voterID) {
+    if (voterId) {
       const userResult = await client.query(
         `SELECT * FROM voter WHERE "VoterID" = $1`,
-        [tokenRecord.voterID]
+        [voterId]
       );
       user = userResult.rows[0];
-    } else if (tokenRecord.candidateID) {
+    } else if (candidateId) {
       const userResult = await client.query(
         `SELECT * FROM candidate WHERE "CandidateID" = $1`,
-        [tokenRecord.candidateID]
+        [candidateId]
       );
       user = userResult.rows[0];
     }
@@ -188,6 +225,7 @@ async function verifyEmailToken(token) {
     return user || null;
   } catch (error) {
     await client.query(`ROLLBACK`);
+    console.error("Error verifying email token:", error);
     throw error;
   } finally {
     client.release();
@@ -203,5 +241,6 @@ export {
   setRefreshCookie,
   rotateRefreshToken,
   resetPasswordToken,
+  generateEmailVerificationToken,
   verifyEmailToken,
 };

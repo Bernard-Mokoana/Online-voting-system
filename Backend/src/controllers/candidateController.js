@@ -1,6 +1,8 @@
 import bcrypt from "bcrypt";
 import pool from "../config/db.js";
 import dotenv from "dotenv";
+import { generateEmailVerificationToken } from "../utils/token.utils.js";
+import { sendEmailVerification } from "../utils/email.utils.js";
 
 dotenv.config();
 export const registerCandidate = async (req, res) => {
@@ -28,44 +30,59 @@ export const registerCandidate = async (req, res) => {
         .status(400)
         .json({ success: false, error: "All fields are required" });
 
-    const existing = await pool.query(`SELECT id FROM users WHERE email = $1`, [
-      email,
-    ]);
+    // Check if candidate already exists by email or idNumber
+    const existing = await pool.query(
+      `SELECT "CandidateID" FROM candidate WHERE "Email" = $1 OR "IdNumber" = $2`,
+      [email, idNumber]
+    );
     if (existing.rows.length > 0)
       return res
         .status(409)
-        .json({ success: false, error: "User already exists" });
+        .json({ success: false, error: "Candidate already exists" });
 
-    const hashedPassword = await bcrypt.hash(password, process.env.HASH_SALT);
+    const hashedPassword = await bcrypt.hash(
+      password,
+      parseInt(process.env.HASH_SALT) || 10
+    );
 
-    const newUser = await pool.query(
-      `INSERT INTO users (firstName,
-      lastName,
-      email,
-      idNumber,
-      position,
-      biography,
-      hashedPassword,) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, firstName,
-      lastName,
-      email,
-      idNumber,
-      position,
-      biography,
-      hashedPassword,`,
+    // Note: This assumes the candidate table has Email and Password fields
+    // If your schema doesn't have these, you'll need to update the table structure
+    // For now, we'll insert what we can and handle email verification
+    const newCandidate = await pool.query(
+      `INSERT INTO candidate ("FirstName", "LastName", "IdNumber", "Position", "Biography", "Email", "Password", "ElectionID")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING "CandidateID", "FirstName", "LastName", "Email", "IdNumber", "Position"`,
       [
         firstName,
         lastName,
-        email,
         idNumber,
         position,
         biography,
+        email,
         hashedPassword,
+        1, // Default ElectionID - you may want to make this a parameter
       ]
     );
 
+    const candidateId = newCandidate.rows[0].CandidateID;
+
+    // Generate and send email verification token
+    try {
+      const verificationToken = await generateEmailVerificationToken(
+        candidateId,
+        false
+      );
+      await sendEmailVerification(email, verificationToken);
+    } catch (emailError) {
+      // Log error but don't fail registration
+      console.error("Failed to send verification email:", emailError);
+    }
+
     return res.status(201).json({
       success: true,
-      user: newUser.rows[0],
+      message:
+        "Candidate created successfully. Please check your email to verify your account.",
+      data: newCandidate.rows[0],
     });
   } catch (err) {
     console.error("Registration error:", err);
