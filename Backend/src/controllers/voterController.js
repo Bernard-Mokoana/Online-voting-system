@@ -62,7 +62,6 @@ export const registerUser = async (req, res) => {
 
     const voterId = newUser.rows[0].voterid;
 
-    // Generate and send email verification token
     try {
       const verificationToken = await generateEmailVerificationToken(
         voterId,
@@ -70,9 +69,7 @@ export const registerUser = async (req, res) => {
       );
       await sendEmailVerification(email, verificationToken);
     } catch (emailError) {
-      // Log error but don't fail registration
       console.error("Failed to send verification email:", emailError);
-      // Optionally, you might want to delete the user here if email is critical
     }
 
     return res.status(201).json({

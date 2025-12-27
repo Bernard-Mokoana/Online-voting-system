@@ -7,9 +7,10 @@ import {
   persistRefreshToken,
   setRefreshCookie,
   hashToken,
-  resetPasswordToken,
   rotateRefreshToken,
   verifyEmailToken,
+  generateResetPasswordToken,
+  verifyResetPasswordToken,
 } from "../utils/token.utils.js";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
@@ -18,17 +19,23 @@ dotenv.config();
 
 export const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { username, email, password } = req.body;
 
     if (!email || !password)
-      return res
-        .status(400)
-        .json({ success: false, message: "Email and password are required" });
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
+      });
 
-    // Check voter first
-    let voterResult = await pool.query(`SELECT * FROM voter WHERE email = $1`, [
-      email,
-    ]);
+    let voterResult = await pool.query(
+      `SELECT * FROM voter WHERE "email" = $1`,
+      [email]
+    );
+
+    let candidateResult = await pool.query(
+      `SELECT * FROM candidate WHERE "email" = $1`,
+      [email]
+    );
 
     let user = null;
     let isVoter = false;
@@ -36,14 +43,16 @@ export const loginUser = async (req, res) => {
     if (voterResult.rows.length > 0) {
       user = voterResult;
       isVoter = true;
+    } else if (candidateResult.rows.length > 0) {
+      user = candidateResult;
+      isVoter = false;
     } else {
-      // Check candidate
-      const candidateResult = await pool.query(
-        `SELECT * FROM candidate WHERE email = $1`,
-        [email]
+      const adminResult = await pool.query(
+        `SELECT * FROM admin WHERE "username" = $1`,
+        [username]
       );
-      if (candidateResult.rows.length > 0) {
-        user = candidateResult;
+      if (adminResult.rows.length > 0) {
+        user = adminResult;
         isVoter = false;
       }
     }
@@ -59,10 +68,7 @@ export const loginUser = async (req, res) => {
         .status(401)
         .json({ success: false, error: "Invalid credentials" });
 
-    // Check email verification status
-    const isVerified = isVoter
-      ? user.rows[0].IsVerified || user.rows[0].isverified || false
-      : false; // Candidates might not have IsVerified field yet
+    const isVerified = isVoter ? user.rows[0].IsVerified : false;
 
     const accessToken = signAccessToken(user);
 
@@ -83,17 +89,12 @@ export const loginUser = async (req, res) => {
       message: "Login successful",
       accessToken,
       user: {
-        id:
-          user.rows[0].VoterID ||
-          user.rows[0].voterid ||
-          user.rows[0].CandidateID ||
-          user.rows[0].candidateid,
-        email: user.rows[0].email || user.rows[0].Email,
+        id: user.rows[0].VoterID || user.rows[0].CandidateID,
+        email: user.rows[0].Email,
         isVerified,
       },
     };
 
-    // Add warning if email is not verified
     if (!isVerified) {
       response.warning =
         "Please verify your email address to access all features.";
@@ -135,7 +136,7 @@ export const logoutUser = async (req, res) => {
 
 export const resetPassword = async (req, res) => {
   try {
-    const { password, newPassword, token } = req.body;
+    const { password, newPassword } = req.body;
 
     if (!password || !newPassword) {
       return res
@@ -143,22 +144,20 @@ export const resetPassword = async (req, res) => {
         .json({ message: "Password and new password are required" });
     }
 
-    // This endpoint needs a user identifier (email or token) to know which user to update
-    // For now, this is a placeholder - you'll need to implement proper token verification
+    const token = generateResetPasswordToken();
+
     if (!token) {
       return res.status(400).json({ message: "Reset token is required" });
     }
 
-    // Verify token and get user (implementation depends on your reset token logic)
-    // const user = await verifyResetToken(token);
-    // if (!user) {
-    //   return res.status(401).json({ message: "Invalid or expired reset token" });
-    // }
+    const user = await verifyResetPasswordToken(token);
+    if (!user) {
+      return res
+        .status(401)
+        .json({ message: "Invalid or expired reset token" });
+    }
 
-    // For now, returning an error as this needs proper implementation
-    return res.status(501).json({
-      message: "Reset password functionality needs to be properly implemented",
-    });
+    return res.status(200).json({ message: "Password changed successfully" });
   } catch (error) {
     console.error("Reset password error:", error);
     return res.status(500).json({ message: "Internal server error" });
@@ -203,7 +202,6 @@ export const refreshToken = async (req, res) => {
       return res.status(401).json({ message: "Refresh token expired" });
     }
 
-    // Get the user from the database
     let user;
     if (tokenRecord.voterID) {
       const userResult = await pool.query(
@@ -234,7 +232,6 @@ export const refreshToken = async (req, res) => {
 };
 
 export const verifyEmail = async (req, res) => {
-  // Accept token from query string (for email links) or request body
   const token = req.query.token || req.body.token;
 
   if (!token) return res.status(400).json({ message: "Token is required" });
@@ -248,9 +245,8 @@ export const verifyEmail = async (req, res) => {
     return res.status(200).json({
       message: "Email verified successfully",
       user: {
-        id:
-          user.VoterID || user.CandidateID || user.voterid || user.candidateid,
-        email: user.Email || user.email,
+        id: user.VoterID || user.CandidateID,
+        email: user.Emai,
         isVerified: true,
       },
     });

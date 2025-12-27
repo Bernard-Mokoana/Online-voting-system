@@ -20,7 +20,7 @@ function signAccessToken(user) {
   const expiresIn = process.env.EXPIRES_IN || "15m";
 
   const payload = {
-    id: user.rows[0].id.toString(),
+    id: user.rows[0].id,
     email: user.rows[0].email,
   };
 
@@ -31,7 +31,7 @@ function signRefreshToken(user, jti) {
   const refreshTokenSecret = process.env.REFRESH_JWT_SECRET;
 
   const payload = {
-    id: user.rows[0].id.toString(),
+    id: user.rows[0].id,
     jti,
   };
 
@@ -41,7 +41,7 @@ function signRefreshToken(user, jti) {
   return token;
 }
 
-async function persistRefreshToken({ user, refreshToken, jti, ip, userAgent }) {
+async function persistRefreshToken({ user, refreshToken }) {
   const tokenHash = hashToken(refreshToken);
   const expiresAt = new Date(Date.now() + REFRESH_TTL_SEC * 1000);
 
@@ -60,22 +60,18 @@ async function persistRefreshToken({ user, refreshToken, jti, ip, userAgent }) {
   }
 
   if (isVoter) {
-    // User is a voter - the ID value is the VoterID
     voterId = idValue;
   } else {
-    // User is a candidate - the ID in VoterID column is actually CandidateID
-    // Verify this by checking if it exists in candidate table
     const candidateCheck = await pool.query(
-      `SELECT "CandidateID" FROM candidate WHERE "CandidateID" = $1`,
+      `SELECT CandidateID FROM candidate WHERE CandidateID = $1`,
       [idValue]
     );
 
     if (candidateCheck.rows.length > 0) {
       candidateId = idValue;
     } else {
-      // Fallback: try to find candidate by email
       const candidateByEmail = await pool.query(
-        `SELECT "CandidateID" FROM candidate WHERE "IdNumber" = $1`,
+        `SELECT CandidateID FROM candidate WHERE IdNumber = $1`,
         [userRow.IdNumber]
       );
       if (candidateByEmail.rows.length > 0) {
@@ -86,10 +82,8 @@ async function persistRefreshToken({ user, refreshToken, jti, ip, userAgent }) {
     }
   }
 
-  // Insert with NULL for the ID that doesn't apply
-  // Schema should allow NULL for one of voterID or candidateID
   await pool.query(
-    `INSERT INTO "refreshToken" ("voterID", "candidateID", token, "expiresAt", "createdAt", "updatedAt") 
+    `INSERT INTO refreshToken (voterID, candidateID, token, expiresAt, createdAt, updatedAt) 
      VALUES ($1, $2, $3, $4, NOW(), NOW())`,
     [voterId, candidateId, tokenHash, expiresAt]
   );
@@ -107,9 +101,8 @@ function setRefreshCookie(res, refreshToken) {
 }
 
 async function rotateRefreshToken(oldDoc, user, req, res) {
-  // Mark old token as inactive
   await pool.query(
-    `UPDATE refreshToken SET isActive = FALSE, "updatedAt" = NOW() WHERE "refreshTokenID" = $1`,
+    `UPDATE refreshToken SET isActive = FALSE, updatedAt = NOW() WHERE refreshTokenID = $1`,
     [oldDoc.rows[0].refreshTokenID]
   );
 
@@ -128,7 +121,11 @@ async function rotateRefreshToken(oldDoc, user, req, res) {
   return { accessToken: newAccess };
 }
 
-async function resetPasswordToken() {}
+async function generateResetPasswordToken() {
+  const token = crypto.randomBytes(32).toString("hex");
+}
+
+async function verifyResetPasswordToken(token) {}
 
 async function generateEmailVerificationToken(userId, isVoter = true) {
   const token = crypto.randomBytes(32).toString("hex");
@@ -136,13 +133,13 @@ async function generateEmailVerificationToken(userId, isVoter = true) {
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
   if (isVoter) {
     await pool.query(
-      `INSERT INTO "emailVerificationToken" ("voterID", "candidateID", token, "expiredAt", "createdAt", "updatedAt")
+      `INSERT INTO emailVerificationToken (voterID, candidateID, token, expiredAt, createdAt, updatedAt)
        VALUES ($1, NULL, $2, $3, NOW(), NOW())`,
       [userId, token, expiresAt]
     );
   } else {
     await pool.query(
-      `INSERT INTO "emailVerificationToken" ("voterID", "candidateID", token, "expiredAt", "createdAt", "updatedAt")
+      `INSERT INTO emailVerificationToken (voterID, candidateID, token, expiredAt, createdAt, updatedAt)
        VALUES (NULL, $1, $2, $3, NOW(), NOW())`,
       [userId, token, expiresAt]
     );
@@ -157,11 +154,10 @@ async function verifyEmailToken(token) {
   try {
     await client.query(`BEGIN`);
 
-    // Query with explicit column selection to ensure we get the right column names
     const tokenResult = await client.query(
-      `SELECT "voterID", "candidateID", token, "isActive", "expiredAt" 
-       FROM "emailVerificationToken" 
-       WHERE token = $1 AND "isActive" = TRUE AND "expiredAt" > NOW()`,
+      `SELECT voterID, candidateID, token, isActive, expiredAt 
+       FROM emailVerificationToken
+       WHERE token = $1 AND "isActive" = TRUE AND expiredAt > NOW()`,
       [token]
     );
 
@@ -172,15 +168,12 @@ async function verifyEmailToken(token) {
       return null;
     }
 
-    // PostgreSQL returns quoted identifiers as-is, unquoted as lowercase
-    // Since we used quoted identifiers in SELECT, we get the exact case
     const voterId = tokenRecord.voterID;
     const candidateId = tokenRecord.candidateID;
 
-    // Update voter or candidate verification status
     if (voterId) {
       const updateResult = await client.query(
-        `UPDATE voter SET "IsVerified" = TRUE WHERE "VoterID" = $1 RETURNING *`,
+        `UPDATE voter SET IsVerified = TRUE WHERE VoterID = $1 RETURNING *`,
         [voterId]
       );
 
@@ -192,30 +185,27 @@ async function verifyEmailToken(token) {
     }
 
     if (candidateId) {
-      // Candidates might not have IsVerified field, adjust if needed
-      // await client.query(
-      //   `UPDATE candidate SET "IsVerified" = TRUE WHERE "CandidateID" = $1`,
-      //   [candidateId]
-      // );
+      await client.query(
+        `UPDATE candidate SET IsVerified = TRUE WHERE CandidateID = $1`,
+        [candidateId]
+      );
     }
 
-    // Mark token as inactive
     await client.query(
-      `UPDATE "emailVerificationToken" SET "isActive" = FALSE WHERE token = $1`,
+      `UPDATE emailVerificationToken SET isActive = FALSE WHERE token = $1`,
       [token]
     );
 
-    // Get the updated user
     let user;
     if (voterId) {
       const userResult = await client.query(
-        `SELECT * FROM voter WHERE "VoterID" = $1`,
+        `SELECT * FROM voter WHERE VoterID = $1`,
         [voterId]
       );
       user = userResult.rows[0];
     } else if (candidateId) {
       const userResult = await client.query(
-        `SELECT * FROM candidate WHERE "CandidateID" = $1`,
+        `SELECT * FROM candidate WHERE CandidateID = $1`,
         [candidateId]
       );
       user = userResult.rows[0];
@@ -240,7 +230,8 @@ export {
   persistRefreshToken,
   setRefreshCookie,
   rotateRefreshToken,
-  resetPasswordToken,
+  generateResetPasswordToken,
+  verifyResetPasswordToken,
   generateEmailVerificationToken,
   verifyEmailToken,
 };

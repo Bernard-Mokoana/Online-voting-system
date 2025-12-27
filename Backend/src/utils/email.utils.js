@@ -13,10 +13,7 @@ const createEmailTransporter = () => {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASSWORD,
     },
-    // TLS options to handle self-signed certificates
     tls: {
-      // Only reject unauthorized certificates in production
-      // In development/testing, allow self-signed certificates
       rejectUnauthorized:
         process.env.NODE_ENV === "production" &&
         process.env.EMAIL_REJECT_UNAUTHORIZED !== "false",

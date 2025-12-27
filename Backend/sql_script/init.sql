@@ -86,8 +86,10 @@ CREATE TABLE Candidate (
     FirstName VARCHAR(100) NOT NULL,
     LastName VARCHAR(100) NOT NULL,
     IdNumber VARCHAR(50) UNIQUE NOT NULL,
+    Email VARCHAR(255) UNIQUE NOT NULL,
     Position VARCHAR(100) NOT NULL,
     Biography TEXT,
+    IsVerified BOOLEAN DEFAULT FALSE,
     ElectionID INTEGER NOT NULL,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -192,9 +194,6 @@ CREATE TABLE emailVerificationToken (
         )
 );
 
-
-
-
 CREATE INDEX idx_address_country ON Address(Country);
 CREATE INDEX idx_address_province ON Address(Province);
 CREATE INDEX idx_address_city ON Address(City);
@@ -224,9 +223,6 @@ CREATE INDEX idx_admin_audit_timestamp ON AdminAuditLog(PerformedAt);
 CREATE INDEX idx_voter_audit_voter ON VoterAuditLog(VoterID);
 CREATE INDEX idx_voter_audit_timestamp ON VoterAuditLog(PerformedAt);
 
--- ============================================
--- Functions and Triggers
--- ============================================
 
 -- Function to update UpdatedAt timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -344,9 +340,6 @@ CREATE TRIGGER trigger_check_voter_verified
     FOR EACH ROW
     EXECUTE FUNCTION check_voter_verified();
 
--- ============================================
--- Views for Common Queries
--- ============================================
 
 -- View: Active Elections
 CREATE OR REPLACE VIEW ActiveElections AS
