@@ -2,13 +2,12 @@ import pool from "../config/db.js";
 
 export const castVote = async (req, res) => {
   try {
-    const { election_id, candidate_id } = req.body;
-    const voter_id = req.user.id;
+    const { ElectionId, CandidateId } = req.body;
+    const VoterId = req.user.id;
 
-    // Check if voter has already voted in this election
     const existingVote = await pool.query(
-      "SELECT * FROM votes WHERE voter_id = $1 AND election_id = $2",
-      [voter_id, election_id]
+      "SELECT * FROM votes WHERE VoterId = $1 AND ElectionId = $2",
+      [VoterId, ElectionId]
     );
 
     if (existingVote.rows.length > 0) {
@@ -18,24 +17,23 @@ export const castVote = async (req, res) => {
       });
     }
 
-    // Record the vote
     await pool.query(
-      "INSERT INTO votes (voter_id, candidate_id, election_id) VALUES ($1, $2, $3)",
-      [voter_id, candidate_id, election_id]
+      "INSERT INTO votes (VoterId, CandidateId, ElectionId) VALUES ($1, $2, $3)",
+      [VoterId, CandidateId, ElectionId]
     );
 
-    // Update candidate's vote count
-    await pool.query("UPDATE candidates SET votes = votes + 1 WHERE id = $1", [
-      candidate_id,
-    ]);
+    await pool.query(
+      "UPDATE candidates SET votes = votes + 1 WHERE CandidateId = $1",
+      [CandidateId]
+    );
 
-    res.json({
+    return res.status(200).json({
       success: true,
       message: "Vote recorded successfully",
     });
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: "Failed to record vote",
     });
@@ -44,7 +42,7 @@ export const castVote = async (req, res) => {
 
 export const getVoteResults = async (req, res) => {
   try {
-    const { election_id } = req.params;
+    const { ElectionId } = req.params;
 
     const results = await pool.query(
       `SELECT c.id, c.name, c.party, COUNT(v.id) as votes
@@ -53,16 +51,16 @@ export const getVoteResults = async (req, res) => {
        WHERE c.election_id = $1
        GROUP BY c.id
        ORDER BY votes DESC`,
-      [election_id]
+      [ElectionId]
     );
 
-    res.json({
+    return res.status(200).json({
       success: true,
       results: results.rows,
     });
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: "Failed to fetch results",
     });

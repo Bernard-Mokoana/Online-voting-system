@@ -30,7 +30,6 @@ export const registerCandidate = async (req, res) => {
         .status(400)
         .json({ success: false, error: "All fields are required" });
 
-    // Check if candidate already exists by email or idNumber
     const existing = await pool.query(
       `SELECT "CandidateID" FROM candidate WHERE "Email" = $1 OR "IdNumber" = $2`,
       [email, idNumber]
@@ -45,9 +44,6 @@ export const registerCandidate = async (req, res) => {
       parseInt(process.env.HASH_SALT) || 10
     );
 
-    // Note: This assumes the candidate table has Email and Password fields
-    // If your schema doesn't have these, you'll need to update the table structure
-    // For now, we'll insert what we can and handle email verification
     const newCandidate = await pool.query(
       `INSERT INTO candidate ("FirstName", "LastName", "IdNumber", "Position", "Biography", "Email", "Password", "ElectionID")
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -60,13 +56,12 @@ export const registerCandidate = async (req, res) => {
         biography,
         email,
         hashedPassword,
-        1, // Default ElectionID - you may want to make this a parameter
+        1,
       ]
     );
 
     const candidateId = newCandidate.rows[0].CandidateID;
 
-    // Generate and send email verification token
     try {
       const verificationToken = await generateEmailVerificationToken(
         candidateId,
@@ -74,7 +69,6 @@ export const registerCandidate = async (req, res) => {
       );
       await sendEmailVerification(email, verificationToken);
     } catch (emailError) {
-      // Log error but don't fail registration
       console.error("Failed to send verification email:", emailError);
     }
 
@@ -142,7 +136,7 @@ export const updateCandidate = async (req, res) => {
       candidate.password
     );
 
-    newPassword = await bcrypt.hash(currentPassword, process.env.HASH_SALT);
+    newPassword = bcrypt.hash(currentPassword, process.env.HASH_SALT);
 
     if (comparedPassword) {
       await pool.query(`UPDATE candidate SET password = $1`, [newPassword]);

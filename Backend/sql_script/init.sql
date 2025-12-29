@@ -87,6 +87,7 @@ CREATE TABLE Candidate (
     LastName VARCHAR(100) NOT NULL,
     IdNumber VARCHAR(50) UNIQUE NOT NULL,
     Email VARCHAR(255) UNIQUE NOT NULL,
+    Password VARCHAR(255) NOT NULL,
     Position VARCHAR(100) NOT NULL,
     Biography TEXT,
     IsVerified BOOLEAN DEFAULT FALSE,
@@ -398,6 +399,7 @@ FROM Voter;
 -- ============================================
 -- Initial Data (Optional)
 -- ============================================
+
 
 -- Insert default election types
 INSERT INTO ElectionType (TypeName, Description) VALUES
