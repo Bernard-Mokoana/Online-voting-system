@@ -42,7 +42,7 @@ export const createElection = async (req, res) => {
 export const getAllElections = async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT * FROM Election ORDER BY Timestamp DESC"
+      "SELECT * FROM Election ORDER BY CreatedAt DESC"
     );
 
     if (result.rows.length === 0) {

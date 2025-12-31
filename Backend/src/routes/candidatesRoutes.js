@@ -6,13 +6,21 @@ import {
   updateCandidate,
   deleteCandidate,
 } from "../controllers/candidateController.js";
+import { upload } from "../middlewares/multer.middleware.js";
+import { authenticateToken } from "../middlewares/auth.js";
 
 const candidateRouter = express.Router();
 
-candidateRouter.post("/register", registerCandidate);
+candidateRouter.post("/register", upload.single("single"), registerCandidate);
 candidateRouter.get("/", getCandidates);
 candidateRouter.get("/:id", getCandidateById);
-candidateRouter.put("/", updateCandidate);
-candidateRouter.delete("/", deleteCandidate);
+
+candidateRouter.put(
+  "/",
+  authenticateToken,
+  upload.single("image"),
+  updateCandidate
+);
+candidateRouter.delete("/", authenticateToken, deleteCandidate);
 
 export default candidateRouter;

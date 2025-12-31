@@ -6,7 +6,7 @@ export const castVote = async (req, res) => {
     const VoterId = req.user.id;
 
     const existingVote = await pool.query(
-      "SELECT * FROM votes WHERE VoterId = $1 AND ElectionId = $2",
+      `SELECT * FROM "vote" WHERE "voterid" = $1 AND "electionid" = $2`,
       [VoterId, ElectionId]
     );
 
@@ -18,13 +18,8 @@ export const castVote = async (req, res) => {
     }
 
     await pool.query(
-      "INSERT INTO votes (VoterId, CandidateId, ElectionId) VALUES ($1, $2, $3)",
+      "INSERT INTO vote (VoterId, CandidateId, ElectionId) VALUES ($1, $2, $3)",
       [VoterId, CandidateId, ElectionId]
-    );
-
-    await pool.query(
-      "UPDATE candidates SET votes = votes + 1 WHERE CandidateId = $1",
-      [CandidateId]
     );
 
     return res.status(200).json({
@@ -32,10 +27,10 @@ export const castVote = async (req, res) => {
       message: "Vote recorded successfully",
     });
   } catch (err) {
-    console.error(err.message);
+    console.error("Voting error: ", err.message);
     return res.status(500).json({
       success: false,
-      error: "Failed to record vote",
+      error: "Failed to record vote" || err.message,
     });
   }
 };
@@ -45,17 +40,18 @@ export const getVoteResults = async (req, res) => {
     const { ElectionId } = req.params;
 
     const results = await pool.query(
-      `SELECT c.id, c.name, c.party, COUNT(v.id) as votes
-       FROM candidates c
-       LEFT JOIN votes v ON c.id = v.candidate_id
-       WHERE c.election_id = $1
-       GROUP BY c.id
-       ORDER BY votes DESC`,
-      [ElectionId]
+      `SELECT * FROM ElectionResults WHERE ElectionID = $1`[ElectionId]
     );
+
+    if (results.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "No results found for the election" });
+    }
 
     return res.status(200).json({
       success: true,
+      message: "Votes fetched successfully",
       results: results.rows,
     });
   } catch (err) {

@@ -89,6 +89,7 @@ CREATE TABLE Candidate (
     Email VARCHAR(255) UNIQUE NOT NULL,
     Password VARCHAR(255) NOT NULL,
     Position VARCHAR(100) NOT NULL,
+    ProfileImage TEXT,
     Biography TEXT,
     IsVerified BOOLEAN DEFAULT FALSE,
     ElectionID INTEGER NOT NULL,
