@@ -11,7 +11,7 @@ import { authenticateToken } from "../middlewares/auth.js";
 
 const candidateRouter = express.Router();
 
-candidateRouter.post("/register", upload.single("single"), registerCandidate);
+candidateRouter.post("/register", upload.single("image"), registerCandidate);
 candidateRouter.get("/", getCandidates);
 candidateRouter.get("/:id", getCandidateById);
 

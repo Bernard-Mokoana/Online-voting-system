@@ -8,8 +8,8 @@ DROP TABLE IF EXISTS ElectionType CASCADE;
 DROP TABLE IF EXISTS Voter CASCADE;
 DROP TABLE IF EXISTS Address CASCADE;
 DROP TABLE IF EXISTS Admin CASCADE;
-
 DROP TABLE IF EXISTS refreshToken CASCADE;
+DROP TABLE IF EXISTS Address CASCADE;
 CREATE TABLE Address (
     AddressID SERIAL PRIMARY KEY,
     Country VARCHAR(100) NOT NULL,
@@ -410,6 +410,85 @@ INSERT INTO ElectionType (TypeName, Description) VALUES
     ('Referendum', 'Public referendum or ballot initiative'),
     ('Primary', 'Primary election for party candidates')
 ON CONFLICT (TypeName) DO NOTHING;
+
+-- Insert sample addresses
+INSERT INTO Address (Country, Province, PostalCode, City, Street) VALUES
+    ('South Africa', 'Gauteng', '2000', 'Johannesburg', '123 Main Street'),
+    ('South Africa', 'Western Cape', '8000', 'Cape Town', '456 Oak Avenue'),
+    ('South Africa', 'KwaZulu-Natal', '4000', 'Durban', '789 Pine Road'),
+    ('South Africa', 'Eastern Cape', '6000', 'Port Elizabeth', '101 Elm Street'),
+    ('South Africa', 'Limpopo', '0700', 'Polokwane', '202 Maple Drive');
+
+-- Insert sample admin
+INSERT INTO Admin (Username, Password) VALUES
+    ('admin', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi');  -- password: adminpass
+
+-- Insert sample voters
+INSERT INTO Voter (FirstName, LastName, Email, IdNumber, Password, DateOfBirth, AddressID, PhoneNumber, IsVerified) VALUES
+    ('John', 'Doe', 'john.doe@example.com', '9001011234567', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '1990-01-01', 1, '+27123456789', TRUE),
+    ('Jane', 'Smith', 'jane.smith@example.com', '8505159876543', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '1985-05-15', 2, '+27987654321', TRUE),
+    ('Bob', 'Johnson', 'bob.johnson@example.com', '9210204567891', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '1992-10-20', 3, '+27112233445', TRUE),
+    ('Alice', 'Williams', 'alice.williams@example.com', '8807071112223', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '1988-07-07', 4, '+27556677889', TRUE),
+    ('Charlie', 'Brown', 'charlie.brown@example.com', '9503034445556', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '1995-03-03', 5, '+27445566778', TRUE);
+
+-- Insert sample elections
+INSERT INTO Election (ElectionTypeID, ElectionName, AdminID, StartDate, EndDate, IsActive, Description) VALUES
+    (1, '2024 Presidential Election', 1, '2024-01-01 00:00:00', '2024-12-31 23:59:59', TRUE, 'National presidential election for 2024'),
+    (2, '2024 Parliamentary Election', 1, '2024-05-01 00:00:00', '2024-05-31 23:59:59', FALSE, 'Parliamentary election for 2024'),
+    (3, 'Local Government Election 2024', 1, '2024-08-01 00:00:00', '2024-08-31 23:59:59', TRUE, 'Municipal elections across provinces');
+
+-- Insert sample candidates
+INSERT INTO Candidate (FirstName, LastName, IdNumber, Email, Password, Position, Biography, IsVerified, ElectionID) VALUES
+    ('David', 'Miller', '8001011234567', 'david.miller@candidate.com', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'President', 'Experienced leader with 20 years in politics.', TRUE, 1),
+    ('Sarah', 'Johnson', '8202029876543', 'sarah.johnson@candidate.com', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'President', 'Former minister focused on education and healthcare.', TRUE, 1),
+    ('Michael', 'Davis', '8403034567891', 'michael.davis@candidate.com', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Mayor', 'Local businessman committed to community development.', TRUE, 3),
+    ('Emma', 'Wilson', '8604041112223', 'emma.wilson@candidate.com', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Mayor', 'Educator with passion for youth empowerment.', TRUE, 3);
+
+-- Insert sample votes
+INSERT INTO Vote (VoterID, ElectionID, CandidateID) VALUES
+    (1, 1, 1),
+    (2, 1, 2),
+    (3, 1, 1),
+    (4, 3, 3),
+    (5, 3, 4);
+
+-- Insert sample admin audit logs
+INSERT INTO AdminAuditLog (AdminID, ActionType, ActionDetails) VALUES
+    (1, 'Created Election', 'Created 2024 Presidential Election'),
+    (1, 'Created Election', 'Created 2024 Parliamentary Election'),
+    (1, 'Created Election', 'Created Local Government Election 2024');
+
+-- Insert sample voter audit logs
+INSERT INTO VoterAuditLog (VoterID, ActionType, ActionDetails) VALUES
+    (1, 'Voted', 'Voted in election 1 for candidate 1'),
+    (2, 'Voted', 'Voted in election 1 for candidate 2'),
+    (3, 'Voted', 'Voted in election 1 for candidate 1'),
+    (4, 'Voted', 'Voted in election 3 for candidate 3'),
+    (5, 'Voted', 'Voted in election 3 for candidate 4');
+
+-- Insert sample refresh tokens
+INSERT INTO refreshToken (voterID, token, expiresAt) VALUES
+    (1, 'sample_refresh_token_voter1', '2025-01-01 00:00:00'),
+    (2, 'sample_refresh_token_voter2', '2025-01-01 00:00:00');
+
+INSERT INTO refreshToken (candidateID, token, expiresAt) VALUES
+    (1, 'sample_refresh_token_candidate1', '2025-01-01 00:00:00'),
+    (2, 'sample_refresh_token_candidate2', '2025-01-01 00:00:00');
+
+-- Insert sample reset password tokens
+INSERT INTO resetPasswordToken (voterID, token, expiredAt) VALUES
+    (3, 'sample_reset_token_voter3', '2024-12-31 23:59:59');
+
+INSERT INTO resetPasswordToken (candidateID, token, expiredAt) VALUES
+    (3, 'sample_reset_token_candidate3', '2024-12-31 23:59:59');
+
+-- Insert sample email verification tokens
+INSERT INTO emailVerificationToken (voterID, token, expiredAt) VALUES
+    (4, 'sample_verify_token_voter4', '2024-12-31 23:59:59'),
+    (5, 'sample_verify_token_voter5', '2024-12-31 23:59:59');
+
+INSERT INTO emailVerificationToken (candidateID, token, expiredAt) VALUES
+    (4, 'sample_verify_token_candidate4', '2024-12-31 23:59:59');
 
 -- ============================================
 -- Grants and Permissions

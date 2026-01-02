@@ -26,12 +26,20 @@ export const registerCandidate = async (req, res) => {
       !idNumber ||
       !position ||
       !biography ||
-      !password ||
-      !electionId
+      !password
     )
       return res
         .status(400)
         .json({ success: false, error: "All fields are required" });
+
+    const electionExists = await pool.query(
+      `SELECT "electionid" FROM election WHERE "electionid" = $1`,
+      [electionId]
+    );
+    if (electionExists.rows.length === 0)
+      return res
+        .status(400)
+        .json({ success: false, error: "Invalid election ID" });
 
     const existing = await pool.query(
       `SELECT "candidateid" FROM candidate WHERE "email" = $1 OR "idnumber" = $2`,
@@ -76,7 +84,9 @@ export const registerCandidate = async (req, res) => {
       ]
     );
 
-    const candidateId = newCandidate.rows[0].CandidateID;
+    const candidateId = newCandidate.rows[0].candidateid;
+
+    console.log(candidateId);
 
     try {
       const verificationToken = await generateEmailVerificationToken(
