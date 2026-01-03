@@ -14,7 +14,6 @@ import {
   FormLabel,
   Card,
   CardContent,
-  CardMedia,
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "../api/axios";
@@ -30,78 +29,68 @@ const Vote = () => {
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    fetchElectionDetails();
+    const fetchData = async () => {
+      try {
+        const [elecRes, candRes] = await Promise.all([
+          axios.get(`/elections/${electionId}`),
+          axios.get("/candidates"), // Fetch all and filter
+        ]);
+
+        setElection(elecRes.data.data || elecRes.data);
+
+        // Filter candidates for this election
+        const allCandidates = candRes.data.data || candRes.data;
+        const relevantCandidates = allCandidates.filter(
+          (c) =>
+            c.electionid === parseInt(electionId) ||
+            c.ElectionID === parseInt(electionId)
+        );
+        setCandidates(relevantCandidates);
+      } catch (err) {
+        setError("Failed to fetch data");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, [electionId]);
 
-  const fetchElectionDetails = async () => {
-    try {
-      const [electionResponse, candidatesResponse] = await Promise.all([
-        axios.get(`/api/elections/${electionId}`),
-        axios.get(`/api/elections/${electionId}/candidates`),
-      ]);
-      setElection(electionResponse.data);
-      setCandidates(candidatesResponse.data);
-    } catch (err) {
-      setError("Failed to fetch election details");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleVote = async () => {
-    if (!selectedCandidate) {
-      setError("Please select a candidate");
-      return;
-    }
+    if (!selectedCandidate) return;
 
     try {
-      await axios.post("/api/votes", {
-        electionId,
-        candidateId: selectedCandidate,
+      // Backend expects PascalCase keys for IDs
+      await axios.post("/votes", {
+        ElectionId: electionId,
+        CandidateId: selectedCandidate,
       });
       setSuccess("Vote cast successfully");
-      setTimeout(() => {
-        navigate("/");
-      }, 2000);
+      setTimeout(() => navigate("/voter-dashboard"), 2000);
     } catch (err) {
-      setError("Failed to cast vote");
+      setError(err.response?.data?.error || "Failed to cast vote");
     }
   };
 
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" p={3}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (!election) {
-    return (
-      <Container maxWidth="md">
-        <Alert severity="error" sx={{ mt: 4 }}>
-          Election not found
-        </Alert>
-      </Container>
-    );
-  }
+  if (loading) return <CircularProgress />;
 
   return (
     <Container maxWidth="md">
       <Paper elevation={3} sx={{ p: 4, mt: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          {election.title}
-        </Typography>
-        <Typography color="text.secondary" paragraph>
-          {election.description}
-        </Typography>
+        {election && (
+          <>
+            <Typography variant="h4" gutterBottom>
+              {election.electionname}
+            </Typography>
+            <Typography paragraph>{election.description}</Typography>
+          </>
+        )}
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
-
         {success && (
           <Alert severity="success" sx={{ mb: 2 }}>
             {success}
@@ -115,18 +104,22 @@ const Vote = () => {
             onChange={(e) => setSelectedCandidate(e.target.value)}
           >
             {candidates.map((candidate) => (
-              <Card key={candidate.id} sx={{ mb: 2, mt: 2 }}>
+              <Card
+                key={candidate.candidateid}
+                sx={{ mb: 2, mt: 2 }}
+                variant="outlined"
+              >
                 <CardContent>
                   <FormControlLabel
-                    value={candidate.id}
+                    value={candidate.candidateid}
                     control={<Radio />}
                     label={
                       <Box>
                         <Typography variant="h6">
-                          {`${candidate.firstName} ${candidate.lastName}`}
+                          {candidate.firstname} {candidate.lastname}
                         </Typography>
-                        <Typography color="text.secondary">
-                          {candidate.bio}
+                        <Typography variant="body2" color="text.secondary">
+                          {candidate.position}
                         </Typography>
                       </Box>
                     }
@@ -138,16 +131,9 @@ const Vote = () => {
         </FormControl>
 
         <Box sx={{ mt: 3, display: "flex", justifyContent: "space-between" }}>
-          <Button
-            variant="outlined"
-            color="primary"
-            onClick={() => navigate("/")}
-          >
-            Cancel
-          </Button>
+          <Button onClick={() => navigate("/voter-dashboard")}>Cancel</Button>
           <Button
             variant="contained"
-            color="primary"
             onClick={handleVote}
             disabled={!selectedCandidate || !!success}
           >

@@ -14,5 +14,6 @@ authRouter.post("/logout", logoutUser);
 authRouter.post("/refresh", refreshToken);
 authRouter.post("/reset", resetPassword);
 authRouter.post("/verify", verifyEmail);
+authRouter.get("/verify", verifyEmail);
 
 export default authRouter;

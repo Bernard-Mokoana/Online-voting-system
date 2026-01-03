@@ -25,32 +25,31 @@ const ElectionList = ({ type = "active" }) => {
 
   const fetchElections = async () => {
     try {
-      const endpoint =
-        type === "active" ? "/api/elections/active" : "/api/elections";
+      // Removed '/api' prefix, used relative path
+      const endpoint = type === "active" ? "/elections/active" : "/elections";
       const response = await axios.get(endpoint);
-      setElections(response.data);
+      // Ensure we handle the response structure correctly
+      setElections(response.data.data || response.data);
     } catch (err) {
       setError(`Failed to fetch ${type} elections`);
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
+  if (loading)
     return (
       <Box display="flex" justifyContent="center" p={3}>
         <CircularProgress />
       </Box>
     );
-  }
-
-  if (error) {
+  if (error)
     return (
       <Alert severity="error" sx={{ m: 2 }}>
         {error}
       </Alert>
     );
-  }
 
   return (
     <Grid container spacing={2}>
@@ -62,31 +61,28 @@ const ElectionList = ({ type = "active" }) => {
         </Grid>
       ) : (
         elections.map((election) => (
-          <Grid item xs={12} md={6} lg={4} key={election.id}>
+          <Grid item xs={12} md={6} lg={4} key={election.electionid}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  {election.title}
+                  {/* PostgreSQL returns lowercase column names */}
+                  {election.electionname}
                 </Typography>
                 <Typography color="text.secondary" gutterBottom>
                   {election.description}
                 </Typography>
                 <Typography variant="body2">
-                  Start Date:{" "}
-                  {new Date(election.startDate).toLocaleDateString()}
+                  Start: {new Date(election.startdate).toLocaleDateString()}
                 </Typography>
                 <Typography variant="body2">
-                  End Date: {new Date(election.endDate).toLocaleDateString()}
-                </Typography>
-                <Typography variant="body2">
-                  Status: {election.status}
+                  End: {new Date(election.enddate).toLocaleDateString()}
                 </Typography>
               </CardContent>
               <CardActions>
                 <Button
                   size="small"
                   color="primary"
-                  onClick={() => navigate(`/elections/${election.id}`)}
+                  onClick={() => navigate(`/elections/${election.electionid}`)}
                 >
                   View Details
                 </Button>
@@ -94,7 +90,9 @@ const ElectionList = ({ type = "active" }) => {
                   <Button
                     size="small"
                     color="secondary"
-                    onClick={() => navigate(`/elections/${election.id}/vote`)}
+                    onClick={() =>
+                      navigate(`/elections/${election.electionid}/vote`)
+                    }
                   >
                     Vote Now
                   </Button>

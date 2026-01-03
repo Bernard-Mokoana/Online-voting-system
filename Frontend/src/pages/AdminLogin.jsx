@@ -11,9 +11,11 @@ import {
   CircularProgress,
 } from "@mui/material";
 import axios from "../api/axios";
+import { useAuth } from "../context/AuthContext";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
+  // We can use the auth context if you updated it, or direct axios
   const [formData, setFormData] = useState({ username: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,12 +30,22 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post("/api/admin/login", formData);
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("admin", JSON.stringify(response.data.admin));
-      navigate("/admin/dashboard");
+      // Backend requires 'email' field to not be empty, even for admin login
+      const payload = {
+        username: formData.username,
+        email: formData.username, // Hack to bypass validation
+        password: formData.password,
+      };
+
+      const response = await axios.post("/admin/login", payload);
+
+      localStorage.setItem("token", response.data.accessToken);
+      localStorage.setItem("user", JSON.stringify(response.data.user));
+
+      // Force reload or redirect to dashboard
+      window.location.href = "/admin-dashboard";
     } catch (err) {
-      setError(err.response?.data?.message || "An error occurred during login");
+      setError(err.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -43,7 +55,7 @@ const AdminLogin = () => {
     <Container maxWidth="sm">
       <Box sx={{ mt: 8, mb: 4 }}>
         <Paper elevation={3} sx={{ p: 4 }}>
-          <Typography variant="h4" component="h1" align="center" gutterBottom>
+          <Typography variant="h4" align="center" gutterBottom>
             Admin Login
           </Typography>
           {error && (
