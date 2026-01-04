@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Container,
   Paper,
@@ -11,10 +10,8 @@ import {
   CircularProgress,
 } from "@mui/material";
 import axios from "../api/axios";
-import { useAuth } from "../context/AuthContext";
 
 const AdminLogin = () => {
-  const navigate = useNavigate();
   // We can use the auth context if you updated it, or direct axios
   const [formData, setFormData] = useState({ username: "", password: "" });
   const [error, setError] = useState("");

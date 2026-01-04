@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Box,
   Paper,
@@ -15,22 +15,25 @@ import axios from "axios";
 
 const AdminDashboard = () => {
   // Mock data for fallback
-  const mockElections = [
-    {
-      ElectionID: 1,
-      ElectionName: "Presidential Election 2025",
-      Description: "Vote for the next president.",
-      StartDate: "2025-05-01T08:00:00Z",
-      EndDate: "2025-05-10T18:00:00Z",
-    },
-    {
-      ElectionID: 2,
-      ElectionName: "Local Council Election 2025",
-      Description: "Vote for your local council representatives.",
-      StartDate: "2025-06-01T08:00:00Z",
-      EndDate: "2025-06-05T18:00:00Z",
-    },
-  ];
+  const mockElections = useMemo(
+    () => [
+      {
+        ElectionID: 1,
+        ElectionName: "Presidential Election 2025",
+        Description: "Vote for the next president.",
+        StartDate: "2025-05-01T08:00:00Z",
+        EndDate: "2025-05-10T18:00:00Z",
+      },
+      {
+        ElectionID: 2,
+        ElectionName: "Local Council Election 2025",
+        Description: "Vote for your local council representatives.",
+        StartDate: "2025-06-01T08:00:00Z",
+        EndDate: "2025-06-05T18:00:00Z",
+      },
+    ],
+    []
+  );
 
   const [elections, setElections] = useState([]);
   const [message, setMessage] = useState({ text: "", severity: "info" });
@@ -53,7 +56,7 @@ const AdminDashboard = () => {
     };
 
     fetchElections();
-  }, []);
+  }, [mockElections]);
 
   const handleAddElection = () => {
     setMessage({

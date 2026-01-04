@@ -14,7 +14,7 @@ import {
   TextField,
   Grid,
 } from "@mui/material";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import axios from "../api/axios";
 import ElectionList from "../components/ElectionList";
 

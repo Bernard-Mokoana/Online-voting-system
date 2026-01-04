@@ -25,23 +25,23 @@ const ElectionDetails = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    const fetchElectionDetails = async () => {
+      try {
+        const [electionResponse, candidatesResponse] = await Promise.all([
+          axios.get(`/api/elections/${electionId}`),
+          axios.get(`/api/elections/${electionId}/candidates`),
+        ]);
+        setElection(electionResponse.data);
+        setCandidates(candidatesResponse.data);
+      } catch (err) {
+        setError("Failed to fetch election details");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchElectionDetails();
   }, [electionId]);
-
-  const fetchElectionDetails = async () => {
-    try {
-      const [electionResponse, candidatesResponse] = await Promise.all([
-        axios.get(`/api/elections/${electionId}`),
-        axios.get(`/api/elections/${electionId}/candidates`),
-      ]);
-      setElection(electionResponse.data);
-      setCandidates(candidatesResponse.data);
-    } catch (err) {
-      setError("Failed to fetch election details");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return (

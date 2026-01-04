@@ -14,7 +14,7 @@ import {
 import { CalendarToday, Info, HowToVote, History } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import axios from "../api/axios";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 
 const VoterDashboard = () => {
   const navigate = useNavigate();

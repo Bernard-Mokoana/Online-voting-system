@@ -20,23 +20,23 @@ const ElectionList = ({ type = "active" }) => {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    const fetchElections = async () => {
+      try {
+        // Removed '/api' prefix, used relative path
+        const endpoint = type === "active" ? "/elections/active" : "/elections";
+        const response = await axios.get(endpoint);
+        // Ensure we handle the response structure correctly
+        setElections(response.data.data || response.data);
+      } catch (err) {
+        setError(`Failed to fetch ${type} elections`);
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchElections();
   }, [type]);
-
-  const fetchElections = async () => {
-    try {
-      // Removed '/api' prefix, used relative path
-      const endpoint = type === "active" ? "/elections/active" : "/elections";
-      const response = await axios.get(endpoint);
-      // Ensure we handle the response structure correctly
-      setElections(response.data.data || response.data);
-    } catch (err) {
-      setError(`Failed to fetch ${type} elections`);
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading)
     return (
