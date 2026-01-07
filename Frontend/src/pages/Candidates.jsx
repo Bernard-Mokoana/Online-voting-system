@@ -20,6 +20,7 @@ import {
   DialogActions,
   TextField,
   Grid,
+  MenuItem,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -261,9 +262,9 @@ const Candidates = () => {
                 required
               >
                 {elections.map((election) => (
-                  <option key={election.id} value={election.id}>
+                  <MenuItem key={election.id} value={election.id}>
                     {election.title}
-                  </option>
+                  </MenuItem>
                 ))}
               </TextField>
             </Box>

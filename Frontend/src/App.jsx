@@ -2,14 +2,19 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
-import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
+import { AuthProvider } from "./context/AuthContext.jsx";
+import { useAuth } from "./hooks/useAuth.js";
 
 // Pages
-import Login from "./pages/Login";
+
+import VoterLogin from "./pages/VoterLogin";
+import CandidateLogin from "./pages/CandidateLogin";
 import AdminLogin from "./pages/AdminLogin";
-import Register from "./pages/Register";
+import VoterRegister from "./pages/VoterRegister";
+import CandidateRegister from "./pages/CandidateRegister";
 import VoterDashboard from "./components/VoterDashboard";
 import AdminDashboard from "./components/AdminDashboard";
+import RoleSelection from "./pages/RoleSelection";
 
 const theme = createTheme({
   palette: {
@@ -49,13 +54,16 @@ function AppRoutes() {
               }
             />
           ) : (
-            <Login />
+            <RoleSelection />
           )
         }
       />
-      <Route path="/login" element={<Login />} />
+      <Route path="/login" element={<VoterLogin />} />
+      <Route path="/candidate-login" element={<CandidateLogin />} />
       <Route path="/admin-login" element={<AdminLogin />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/register" element={<VoterRegister />} />
+      <Route path="/candidate-register" element={<CandidateRegister />} />
+      <Route path="/role-selection" element={<RoleSelection />} />
       <Route
         path="/voter-dashboard"
         element={

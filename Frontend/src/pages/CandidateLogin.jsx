@@ -10,7 +10,7 @@ import {
   Alert,
   CircularProgress,
 } from "@mui/material";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../hooks/useAuth.js";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -49,7 +49,7 @@ const Login = () => {
       <Box sx={{ mt: 8, mb: 4 }}>
         <Paper elevation={3} sx={{ p: 4 }}>
           <Typography variant="h4" component="h1" align="center" gutterBottom>
-            Voter Login
+            Candidate Login
           </Typography>
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
@@ -93,13 +93,16 @@ const Login = () => {
           <Box sx={{ mt: 3, textAlign: "center" }}>
             <Typography variant="body2">
               Don't have an account?{" "}
-              <Link to="/register" style={{ textDecoration: "none" }}>
+              <Link to="/role-selection" style={{ textDecoration: "none" }}>
                 <Button color="primary">Register</Button>
               </Link>
             </Typography>
             <Typography variant="body2" sx={{ mt: 1 }}>
               <Link to="/admin-login" style={{ textDecoration: "none" }}>
                 <Button color="secondary">Admin Login</Button>
+              </Link>
+              <Link to="/voter-login" style={{ textDecoration: "none" }}>
+                <Button color="secondary">Voter Login</Button>
               </Link>
             </Typography>
           </Box>

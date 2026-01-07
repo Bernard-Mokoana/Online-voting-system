@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Container,
   Paper,
@@ -9,12 +9,11 @@ import {
   Alert,
   CircularProgress,
 } from "@mui/material";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.js";
 
-const Register = () => {
+const CandidateRegister = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { register } = useAuth();
   const [formData, setFormData] = useState({
     firstName: "",
@@ -25,17 +24,7 @@ const Register = () => {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [selectedRole, setSelectedRole] = useState("");
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const role = params.get("role");
-    if (role) {
-      setSelectedRole(role);
-    } else {
-      navigate("/role-selection");
-    }
-  }, [location, navigate]);
+  const role = "candidate";
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -57,8 +46,8 @@ const Register = () => {
     }
 
     try {
-      await register({ ...formData, role: selectedRole });
-      navigate("/login?role=" + selectedRole);
+      await register({ ...formData, role });
+      navigate("/candidate-login");
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed");
     } finally {
@@ -70,8 +59,7 @@ const Register = () => {
     <Container maxWidth="sm">
       <Paper elevation={3} sx={{ p: 4, mt: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom align="center">
-          Register as{" "}
-          {selectedRole.charAt(0).toUpperCase() + selectedRole.slice(1)}
+          Register as Candidate
         </Typography>
 
         {error && (
@@ -147,7 +135,7 @@ const Register = () => {
             Already have an account?{" "}
             <Button
               color="primary"
-              onClick={() => navigate("/login?role=" + selectedRole)}
+              onClick={() => navigate("/candidate-login")}
             >
               Login
             </Button>
@@ -158,4 +146,4 @@ const Register = () => {
   );
 };
 
-export default Register;
+export default CandidateRegister;
