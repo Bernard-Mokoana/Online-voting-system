@@ -10,21 +10,24 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth.js";
+import api from "../api/axios";
 
 const CandidateRegister = () => {
   const navigate = useNavigate();
-  const { register } = useAuth();
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
+    idNumber: "",
+    position: "",
+    biography: "",
     password: "",
     confirmPassword: "",
+    electionId: "",
   });
+  const [image, setImage] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const role = "candidate";
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -32,6 +35,10 @@ const CandidateRegister = () => {
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleImageChange = (e) => {
+    setImage(e.target.files[0]);
   };
 
   const handleSubmit = async (e) => {
@@ -45,8 +52,25 @@ const CandidateRegister = () => {
       return;
     }
 
+    const data = new FormData();
+    data.append("firstName", formData.firstName);
+    data.append("lastName", formData.lastName);
+    data.append("email", formData.email);
+    data.append("idNumber", formData.idNumber);
+    data.append("position", formData.position);
+    data.append("biography", formData.biography);
+    data.append("password", formData.password);
+    data.append("electionId", formData.electionId);
+    if (image) {
+      data.append("image", image);
+    }
+
     try {
-      await register({ ...formData, role });
+      await api.post("/candidates/register", data, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
       navigate("/candidate-login");
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed");
@@ -99,6 +123,44 @@ const CandidateRegister = () => {
           />
           <TextField
             fullWidth
+            label="ID Number"
+            name="idNumber"
+            value={formData.idNumber}
+            onChange={handleChange}
+            margin="normal"
+            required
+          />
+          <TextField
+            fullWidth
+            label="Position"
+            name="position"
+            value={formData.position}
+            onChange={handleChange}
+            margin="normal"
+            required
+          />
+          <TextField
+            fullWidth
+            label="Biography"
+            name="biography"
+            value={formData.biography}
+            onChange={handleChange}
+            margin="normal"
+            multiline
+            rows={4}
+            required
+          />
+          <TextField
+            fullWidth
+            label="Election ID"
+            name="electionId"
+            value={formData.electionId}
+            onChange={handleChange}
+            margin="normal"
+            required
+          />
+          <TextField
+            fullWidth
             label="Password"
             name="password"
             type="password"
@@ -116,6 +178,17 @@ const CandidateRegister = () => {
             onChange={handleChange}
             margin="normal"
             required
+          />
+          <TextField
+            fullWidth
+            type="file"
+            label="Candidate Image"
+            name="image"
+            onChange={handleImageChange}
+            margin="normal"
+            InputLabelProps={{
+              shrink: true,
+            }}
           />
           <Button
             type="submit"

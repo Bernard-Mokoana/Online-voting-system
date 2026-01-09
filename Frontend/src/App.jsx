@@ -1,7 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
-import CssBaseline from "@mui/material/CssBaseline";
+import { CircularProgress, CssBaseline, Box } from "@mui/material";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { useAuth } from "./hooks/useAuth.js";
 
@@ -14,6 +14,7 @@ import VoterRegister from "./pages/VoterRegister";
 import CandidateRegister from "./pages/CandidateRegister";
 import VoterDashboard from "./components/VoterDashboard";
 import AdminDashboard from "./components/AdminDashboard";
+import CandidateDashboard from "./components/CandidateDashboard";
 import RoleSelection from "./pages/RoleSelection";
 
 const theme = createTheme({
@@ -40,7 +41,22 @@ const ProtectedRoute = ({ children }) => {
 };
 
 function AppRoutes() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Routes>
@@ -50,7 +66,11 @@ function AppRoutes() {
           user ? (
             <Navigate
               to={
-                user.role === "admin" ? "/admin-dashboard" : "/voter-dashboard"
+                user.role === "admin"
+                  ? "/admin-dashboard"
+                  : user.role === "candidate"
+                  ? "/candidate-dashboard"
+                  : "/voter-dashboard"
               }
             />
           ) : (
@@ -77,6 +97,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/candidate-dashboard"
+        element={
+          <ProtectedRoute>
+            <CandidateDashboard />
           </ProtectedRoute>
         }
       />

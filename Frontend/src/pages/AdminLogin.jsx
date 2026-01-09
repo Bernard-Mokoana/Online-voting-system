@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Container,
   Paper,
@@ -9,11 +10,12 @@ import {
   Alert,
   CircularProgress,
 } from "@mui/material";
-import axios from "../api/axios";
+import { useAuth } from "../hooks/useAuth.js";
 
 const AdminLogin = () => {
-  // We can use the auth context if you updated it, or direct axios
-  const [formData, setFormData] = useState({ username: "", password: "" });
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -27,20 +29,8 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
-      // Backend requires 'email' field to not be empty, even for admin login
-      const payload = {
-        username: formData.username,
-        email: formData.username, // Hack to bypass validation
-        password: formData.password,
-      };
-
-      const response = await axios.post("/admin/login", payload);
-
-      localStorage.setItem("token", response.data.accessToken);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
-
-      // Force reload or redirect to dashboard
-      window.location.href = "/admin-dashboard";
+      await login(formData.email, formData.password, "admin");
+      navigate("/admin-dashboard");
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
     } finally {
@@ -63,9 +53,9 @@ const AdminLogin = () => {
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
-              label="Username"
-              name="username"
-              value={formData.username}
+              label="Email"
+              name="email"
+              value={formData.email}
               onChange={handleChange}
               margin="normal"
               required

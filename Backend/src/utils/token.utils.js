@@ -15,24 +15,26 @@ function createJti() {
   return crypto.randomBytes(16).toString("hex");
 }
 
-function signAccessToken(user) {
+function signAccessToken(user, role) {
   const secret = process.env.JWT_SECRET;
   const expiresIn = process.env.EXPIRES_IN || "15m";
 
   const payload = {
-    id: user.rows[0].id,
-    email: user.rows[0].email,
+    id: user.voterid || user.candidateid || user.adminid,
+    email: user.email || user.username,
+    role: role,
   };
 
   return jwt.sign(payload, secret, { expiresIn });
 }
 
-function signRefreshToken(user, jti) {
+function signRefreshToken(user, jti, role) {
   const refreshTokenSecret = process.env.REFRESH_JWT_SECRET;
 
   const payload = {
-    id: user.rows[0].id,
+    id: user.voterid || user.candidateid || user.adminid,
     jti,
+    role,
   };
 
   const token = jwt.sign(payload, refreshTokenSecret, {
@@ -41,52 +43,32 @@ function signRefreshToken(user, jti) {
   return token;
 }
 
-async function persistRefreshToken({ user, refreshToken }) {
+async function persistRefreshToken({ user, refreshToken, role }) {
   const tokenHash = hashToken(refreshToken);
   const expiresAt = new Date(Date.now() + REFRESH_TTL_SEC * 1000);
 
-  const userRow = user.rows[0];
+  let query = "";
+  let values = [];
 
-  const isVoter =
-    userRow.HasVoted !== undefined || userRow.IsVerified !== undefined;
-
-  let voterId = null;
-  let candidateId = null;
-
-  const idValue = userRow.VoterID || userRow.voterid || userRow.voterID;
-
-  if (!idValue) {
-    throw new Error("Unable to determine user ID from query result");
+  if (role === "voter") {
+    query = `INSERT INTO refreshToken (voterID, token, expiresAt, createdAt, updatedAt) 
+             VALUES ($1, $2, $3, NOW(), NOW())`;
+    values = [user.voterid, tokenHash, expiresAt];
+  } else if (role === "candidate") {
+    query = `INSERT INTO refreshToken (candidateID, token, expiresAt, createdAt, updatedAt)
+             VALUES ($1, $2, $3, NOW(), NOW())`;
+    values = [user.candidateid, tokenHash, expiresAt];
+  } else if (role === "admin") {
+    query = `INSERT INTO refreshToken (adminID, token, expiresAt, createdAt, updatedAt)
+             VALUES ($1, $2, $3, NOW(), NOW())`;
+    values = [user.adminid, tokenHash, expiresAt];
   }
 
-  if (isVoter) {
-    voterId = idValue;
+  if (query) {
+    await pool.query(query, values);
   } else {
-    const candidateCheck = await pool.query(
-      `SELECT CandidateID FROM candidate WHERE CandidateID = $1`,
-      [idValue]
-    );
-
-    if (candidateCheck.rows.length > 0) {
-      candidateId = idValue;
-    } else {
-      const candidateByEmail = await pool.query(
-        `SELECT CandidateID FROM candidate WHERE IdNumber = $1`,
-        [userRow.IdNumber]
-      );
-      if (candidateByEmail.rows.length > 0) {
-        candidateId = candidateByEmail.rows[0].CandidateID;
-      } else {
-        throw new Error("Unable to determine CandidateID for candidate user");
-      }
-    }
+    throw new Error("Invalid user role for persisting refresh token.");
   }
-
-  await pool.query(
-    `INSERT INTO refreshToken (voterID, candidateID, token, expiresAt, createdAt, updatedAt) 
-     VALUES ($1, $2, $3, $4, NOW(), NOW())`,
-    [voterId, candidateId, tokenHash, expiresAt]
-  );
 }
 
 function setRefreshCookie(res, refreshToken) {
@@ -100,15 +82,15 @@ function setRefreshCookie(res, refreshToken) {
   });
 }
 
-async function rotateRefreshToken(oldDoc, user, req, res) {
+async function rotateRefreshToken(oldDoc, user, req, res, role) {
   await pool.query(
-    `UPDATE refreshToken SET isActive = FALSE, updatedAt = NOW() WHERE refreshTokenID = $1`,
-    [oldDoc.rows[0].refreshTokenID]
+    `UPDATE refreshToken SET isActive = FALSE, updatedAt = NOW() WHERE "refreshTokenID" = $1`,
+    [oldDoc.refreshtokenid]
   );
 
   const newJti = createJti();
-  const newAccess = signAccessToken(user);
-  const newRefresh = signRefreshToken(user, newJti);
+  const newAccess = signAccessToken(user, role);
+  const newRefresh = signRefreshToken(user, newJti, role);
 
   await persistRefreshToken({
     user,
@@ -116,6 +98,7 @@ async function rotateRefreshToken(oldDoc, user, req, res) {
     jti: newJti,
     ip: req.ip,
     userAgent: req.headers["user-agent"] || "",
+    role,
   });
   setRefreshCookie(res, newRefresh);
   return { accessToken: newAccess };
@@ -168,12 +151,12 @@ async function verifyEmailToken(token) {
       return null;
     }
 
-    const voterId = tokenRecord.voterID;
-    const candidateId = tokenRecord.candidateID;
+    const voterId = tokenRecord.voterid;
+    const candidateId = tokenRecord.candidateid;
 
     if (voterId) {
       const updateResult = await client.query(
-        `UPDATE voter SET IsVerified = TRUE WHERE VoterID = $1 RETURNING *`,
+        `UPDATE voter SET IsVerified = TRUE WHERE "VoterID" = $1 RETURNING *`,
         [voterId]
       );
 
@@ -186,26 +169,26 @@ async function verifyEmailToken(token) {
 
     if (candidateId) {
       await client.query(
-        `UPDATE candidate SET IsVerified = TRUE WHERE CandidateID = $1`,
+        `UPDATE candidate SET IsVerified = TRUE WHERE "CandidateID" = $1`,
         [candidateId]
       );
     }
 
     await client.query(
-      `UPDATE emailVerificationToken SET isActive = FALSE WHERE token = $1`,
+      `UPDATE "emailVerificationToken" SET "isActive" = FALSE WHERE token = $1`,
       [token]
     );
 
     let user;
     if (voterId) {
       const userResult = await client.query(
-        `SELECT * FROM voter WHERE VoterID = $1`,
+        `SELECT * FROM voter WHERE "VoterID" = $1`,
         [voterId]
       );
       user = userResult.rows[0];
     } else if (candidateId) {
       const userResult = await client.query(
-        `SELECT * FROM candidate WHERE CandidateID = $1`,
+        `SELECT * FROM candidate WHERE "CandidateID" = $1`,
         [candidateId]
       );
       user = userResult.rows[0];

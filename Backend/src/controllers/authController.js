@@ -19,7 +19,8 @@ dotenv.config();
 
 export const loginUser = async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { email, password } = req.body;
+    const isAdminLogin = req.baseUrl.includes("/admin");
 
     if (!email || !password)
       return res.status(400).json({
@@ -27,33 +28,36 @@ export const loginUser = async (req, res) => {
         message: "Email and password are required",
       });
 
-    let voterResult = await pool.query(
-      `SELECT * FROM voter WHERE "email" = $1`,
-      [email]
-    );
-
-    let candidateResult = await pool.query(
-      `SELECT * FROM candidate WHERE "email" = $1`,
-      [email]
-    );
-
     let user = null;
-    let isVoter = false;
+    let role = null;
 
-    if (voterResult.rows.length > 0) {
-      user = voterResult;
-      isVoter = true;
-    } else if (candidateResult.rows.length > 0) {
-      user = candidateResult;
-      isVoter = false;
-    } else {
+    if (isAdminLogin) {
       const adminResult = await pool.query(
         `SELECT * FROM admin WHERE "username" = $1`,
-        [username]
+        [email]
       );
       if (adminResult.rows.length > 0) {
         user = adminResult;
-        isVoter = false;
+        role = "admin";
+      }
+    } else {
+      let voterResult = await pool.query(
+        `SELECT * FROM voter WHERE "email" = $1`,
+        [email]
+      );
+
+      if (voterResult.rows.length > 0) {
+        user = voterResult;
+        role = "voter";
+      } else {
+        let candidateResult = await pool.query(
+          `SELECT * FROM candidate WHERE "email" = $1`,
+          [email]
+        );
+        if (candidateResult.rows.length > 0) {
+          user = candidateResult;
+          role = "candidate";
+        }
       }
     }
 
@@ -68,19 +72,20 @@ export const loginUser = async (req, res) => {
         .status(401)
         .json({ success: false, error: "Invalid credentials" });
 
-    const isVerified = isVoter ? user.rows[0].IsVerified : false;
+    const isVerified = role === "voter" ? user.rows[0].IsVerified : false;
 
-    const accessToken = signAccessToken(user);
+    const accessToken = signAccessToken(user.rows[0], role);
 
     const jti = createJti();
-    const refreshToken = signRefreshToken(user, jti);
+    const refreshToken = signRefreshToken(user.rows[0], jti, role);
 
     await persistRefreshToken({
-      user,
+      user: user.rows[0],
       refreshToken,
       jti,
       ip: req.ip,
       userAgent: req.headers["user-agent"] || "",
+      role,
     });
 
     setRefreshCookie(res, refreshToken);
@@ -89,13 +94,17 @@ export const loginUser = async (req, res) => {
       message: "Login successful",
       accessToken,
       user: {
-        id: user.rows[0].VoterID || user.rows[0].CandidateID,
-        email: user.rows[0].Email,
+        id:
+          user.rows[0].voterid ||
+          user.rows[0].candidateid ||
+          user.rows[0].adminid,
+        email: user.rows[0].email || user.rows[0].username,
         isVerified,
+        role,
       },
     };
 
-    if (!isVerified) {
+    if (!isVerified && role === "voter") {
       response.warning =
         "Please verify your email address to access all features.";
     }
@@ -182,7 +191,7 @@ export const refreshToken = async (req, res) => {
 
     const tokenHash = hashToken(token);
     const doc = await pool.query(
-      `SELECT "refreshTokenID", token, "voterID", "candidateID", "expiresAt", isActive 
+      `SELECT "refreshTokenID", token, "voterID", "candidateID", "adminID", "expiresAt", isActive 
        FROM "refreshToken" 
        WHERE token = $1 AND isActive = TRUE`,
       [tokenHash]
@@ -194,36 +203,43 @@ export const refreshToken = async (req, res) => {
 
     const tokenRecord = doc.rows[0];
 
-    if (!tokenRecord.isActive) {
+    if (!tokenRecord.isactive) {
       return res.status(401).json({ message: "Refresh token revoked" });
     }
 
-    if (new Date(tokenRecord.expiresAt) < new Date()) {
+    if (new Date(tokenRecord.expiresat) < new Date()) {
       return res.status(401).json({ message: "Refresh token expired" });
     }
 
     let user;
-    if (tokenRecord.voterID) {
+    const role = decoded.role;
+    if (tokenRecord.voterid) {
       const userResult = await pool.query(
         `SELECT * FROM voter WHERE "VoterID" = $1`,
-        [tokenRecord.voterID]
+        [tokenRecord.voterid]
       );
-      user = userResult;
-    } else if (tokenRecord.candidateID) {
+      user = userResult.rows[0];
+    } else if (tokenRecord.candidateid) {
       const userResult = await pool.query(
         `SELECT * FROM candidate WHERE "CandidateID" = $1`,
-        [tokenRecord.candidateID]
+        [tokenRecord.candidateid]
       );
-      user = userResult;
+      user = userResult.rows[0];
+    } else if (tokenRecord.adminid) {
+      const userResult = await pool.query(
+        `SELECT * FROM admin WHERE "AdminID" = $1`,
+        [tokenRecord.adminid]
+      );
+      user = userResult.rows[0];
     } else {
       return res.status(401).json({ message: "Invalid token association" });
     }
 
-    if (user.rows.length === 0) {
+    if (!user) {
       return res.status(401).json({ message: "User not found" });
     }
 
-    const result = await rotateRefreshToken(doc, user, req, res);
+    const result = await rotateRefreshToken(doc.rows[0], user, req, res, role);
     return res.status(200).json({ accessToken: result.accessToken });
   } catch (error) {
     console.error("Refresh token error:", error);
@@ -245,8 +261,8 @@ export const verifyEmail = async (req, res) => {
     return res.status(200).json({
       message: "Email verified successfully",
       user: {
-        id: user.VoterID || user.CandidateID,
-        email: user.Emai,
+        id: user.voterid || user.candidateid,
+        email: user.email,
         isVerified: true,
       },
     });

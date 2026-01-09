@@ -35,7 +35,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await login(formData.email, formData.password);
+      await login(formData.email, formData.password, "voter");
       navigate("/voter-dashboard");
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");

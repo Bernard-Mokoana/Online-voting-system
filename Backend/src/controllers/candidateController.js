@@ -155,9 +155,11 @@ export const updateCandidate = async (req, res) => {
     } = req.body;
 
     const candidateId = req.user.id;
+    let passwordUpdated = false;
+    let fieldsUpdated = false;
 
     const candidate = await pool.query(
-      `SELECT password FROM candidate WHERE candidateID = $1`,
+      `SELECT password FROM candidate WHERE "candidateid" = $1`,
       [candidateId]
     );
 
@@ -165,60 +167,83 @@ export const updateCandidate = async (req, res) => {
       return res.status(404).json({ message: "candidate not found" });
     }
 
-    let imageUpdateQuery = "";
-    const queryParams = [firstName, lastName, biography, email, candidateId];
-
-    if (req.file) {
-      try {
-        const profileImageUrl = await uploadFile("candidates", req.file);
-        queryParams.push(profileImageUrl);
-      } catch (uploadError) {
-        return res
-          .status(500)
-          .json({ message: "Image upload failed: ", uploadError });
-      }
-    }
-
-    const hasImage = queryParams.length === 6;
-
-    if (currentPassword) {
+    if (currentPassword && newPassword) {
       const isMatch = await bcrypt.compare(
         currentPassword,
-        candidate.rows[0].Password
+        candidate.rows[0].password
       );
       if (!isMatch) {
         return res.status(401).json({ message: "Incorrect current password" });
       }
-    }
 
-    if (newPassword) {
-      const hashedPassword = bcrypt.hash(
-        currentPassword,
+      const hashedPassword = await bcrypt.hash(
+        newPassword,
         parseInt(process.env.HASH_SALT) || 10
       );
       await pool.query(
         `UPDATE candidate SET "password" = $1 WHERE "candidateid" = $2`,
         [hashedPassword, candidateId]
       );
+      passwordUpdated = true;
     }
 
-    const updateCandidate = pool.query(
-      `UPDATE candidate SET "firstName" = COALESCE($1, "firstname""),
-      "lastname" = COALESCE($2, "lastname"),
-      "email" = COALESCE($3, "email"),
-      "biography" = COALESCE($4, "biography"),
-      ${hasImage ? `, "ProfileImage" = $6` : " "},
-      WHERE "candidateid" = $5 RETURNING *`,
-      queryParams
+    let profileImageUrl = null;
+    if (req.file) {
+      try {
+        profileImageUrl = await uploadFile("candidates", req.file);
+      } catch (uploadError) {
+        console.error("Image upload failed: ", uploadError);
+        return res
+          .status(500)
+          .json({ success: false, message: "Failed to upload profile image" });
+      }
+    }
+
+    const updateFields = {
+      firstname: firstName,
+      lastname: lastName,
+      email: email,
+      biography: biography,
+      profileimage: profileImageUrl,
+    };
+
+    const querySet = [];
+    const queryParams = [];
+    let queryIndex = 1;
+
+    for (const [key, value] of Object.entries(updateFields)) {
+      if (value) {
+        querySet.push(`"${key}" = $${queryIndex++}`);
+        queryParams.push(value);
+      }
+    }
+
+    if (querySet.length > 0) {
+      fieldsUpdated = true;
+      queryParams.push(candidateId);
+      const updateQuery = `UPDATE candidate SET ${querySet.join(
+        ", "
+      )} WHERE "candidateid" = $${queryIndex} RETURNING *`;
+
+      await pool.query(updateQuery, queryParams);
+    }
+
+    if (!fieldsUpdated && !passwordUpdated) {
+      return res.status(400).json({ message: "No fields to update" });
+    }
+
+    const updatedCandidate = await pool.query(
+      `SELECT * FROM candidate WHERE "candidateid" = $1`,
+      [candidateId]
     );
 
     return res.status(200).json({
       message: "Candidate updated successfully",
-      data: updateCandidate.rows[0],
+      data: updatedCandidate.rows[0],
     });
   } catch (error) {
     console.error("error updating candidate", error);
-    return res.status(500).json({ message: "Internal server errort" });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -234,7 +259,7 @@ export const deleteCandidate = async (req, res) => {
     }
 
     const candidateResults = await pool.query(
-      `SELECT 'password FROM candidate WHERE "candidateid = $1`,
+      `SELECT "password" FROM candidate WHERE "candidateid" = $1`,
       [candidateId]
     );
 
@@ -244,7 +269,7 @@ export const deleteCandidate = async (req, res) => {
 
     const isMatch = await bcrypt.compare(
       password,
-      candidateResults.rows[0].Password
+      candidateResults.rows[0].password
     );
 
     if (!isMatch) {
