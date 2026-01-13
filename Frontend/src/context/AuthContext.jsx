@@ -6,12 +6,16 @@ export { AuthContext };
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const user = localStorage.getItem("user");
-    if (user) {
-      setUser(JSON.parse(user));
+    const storedUser = localStorage.getItem("user");
+    const storedToken = localStorage.getItem("token");
+    if (storedUser && storedToken) {
+      setUser(JSON.parse(storedUser));
+      setToken(storedToken);
+      axios.defaults.headers.common["Authorization"] = `Bearer ${storedToken}`;
     }
     setLoading(false);
   }, []);
@@ -29,18 +33,24 @@ export const AuthProvider = ({ children }) => {
         withCredentials: true,
       }
     );
-    const userData = response?.data?.user;
+    const { user: userData, accessToken } = response.data;
     setUser(userData);
-localStorage.setItem("user", JSON.stringify(userData));
+    setToken(accessToken);
+    localStorage.setItem("user", JSON.stringify(userData));
+    localStorage.setItem("token", accessToken);
+    axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
   };
 
   const logout = () => {
     setUser(null);
+    setToken(null);
     localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    delete axios.defaults.headers.common["Authorization"];
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

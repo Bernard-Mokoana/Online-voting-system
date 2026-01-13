@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import { CalendarToday, Info, HowToVote } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import axios from "../api/axios";
+// import axios from "../api/axios";
 import { useAuth } from "../hooks/useAuth";
 
 const CandidateDashboard = () => {
@@ -23,7 +23,13 @@ const CandidateDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock data for now, replace with API call
+    // const fetchElection = async () => {
+    //   try {
+    //     await axios.get("")
+    //   } catch(error) {
+
+    //   }
+    // }
     const fetchElections = () => {
       setParticipatedElections([
         {
