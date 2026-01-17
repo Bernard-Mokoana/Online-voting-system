@@ -10,47 +10,100 @@ import {
   CardActions,
   Alert,
   CircularProgress,
+  Avatar,
 } from "@mui/material";
-import { CalendarToday, Info, HowToVote } from "@mui/icons-material";
+import { CalendarToday, Info, HowToVote, Logout } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-// import axios from "../api/axios";
+import axios from "../api/axios";
 import { useAuth } from "../hooks/useAuth";
 
 const CandidateDashboard = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user: authUser, logout } = useAuth();
   const [participatedElections, setParticipatedElections] = useState([]);
+  const [candidateProfile, setCandidateProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // const fetchElection = async () => {
-    //   try {
-    //     await axios.get("")
-    //   } catch(error) {
-
-    //   }
-    // }
-    const fetchElections = () => {
-      setParticipatedElections([
-        {
-          electionid: 1,
-          electionname: "Presidential Election 2025",
-          description: "Vote for the next president.",
-          enddate: "2025-05-10T18:00:00Z",
-        },
-      ]);
+    if (!authUser?.id) {
       setLoading(false);
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        const [electionsResponse, candidateResponse] = await Promise.all([
+          axios.get("/candidates/elections"),
+          axios.get(`/candidates/${authUser.id}`),
+        ]);
+
+        setParticipatedElections(electionsResponse.data.data || []);
+        setCandidateProfile(candidateResponse.data.data);
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
     };
-    fetchElections();
-  }, []);
+
+    fetchData();
+  }, [authUser]);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
 
   if (loading) return <CircularProgress />;
 
   return (
     <Box sx={{ p: 2 }}>
-      <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
-        Welcome, {user?.firstName || "Candidate"}!
-      </Typography>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
+        <Typography variant="h5" component="div">
+          Welcome,{" "}
+          {candidateProfile?.firstname || authUser?.firstName || "Candidate"}!
+        </Typography>
+        <Button
+          variant="contained"
+          color="secondary"
+          startIcon={<Logout />}
+          onClick={handleLogout}
+        >
+          Logout
+        </Button>
+      </Box>
+
+      {candidateProfile && (
+        <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+          <Grid container spacing={3}>
+            <Grid item>
+              <Avatar
+                src={candidateProfile.profileimage}
+                alt={`${candidateProfile.firstname} ${candidateProfile.lastname}`}
+                sx={{ width: 120, height: 120 }}
+              />
+            </Grid>
+            <Grid item xs>
+              <Typography variant="h6">
+                {candidateProfile.firstname} {candidateProfile.lastname}
+              </Typography>
+              <Typography variant="subtitle1" color="text.secondary">
+                {candidateProfile.position}
+              </Typography>
+              <Typography variant="body1" sx={{ mt: 2 }}>
+                {candidateProfile.biography}
+              </Typography>
+            </Grid>
+          </Grid>
+        </Paper>
+      )}
 
       <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" gutterBottom>

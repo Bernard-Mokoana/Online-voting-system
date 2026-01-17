@@ -5,6 +5,7 @@ import {
   getCandidateById,
   updateCandidate,
   deleteCandidate,
+  getCandidateElections,
 } from "../controllers/candidateController.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { authenticateToken } from "../middlewares/auth.js";
@@ -13,7 +14,8 @@ const candidateRouter = express.Router();
 
 candidateRouter.post("/register", upload.single("image"), registerCandidate);
 candidateRouter.get("/", getCandidates);
-candidateRouter.get("/:id", getCandidateById);
+candidateRouter.get("/elections", authenticateToken, getCandidateElections);
+candidateRouter.get("/:candidateId", getCandidateById);
 
 candidateRouter.put(
   "/",

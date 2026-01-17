@@ -5,12 +5,15 @@ import dotenv from "dotenv";
 
 dotenv.config();
 export const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers["authorization"] || "";
-  const [scheme, tokenFromHeader] = authHeader && authHeader.split(" ")[1];
+  const authHeader = req.headers["authorization"];
   const tokenFromCookie = req.cookies?.accessToken;
+  let token;
 
-  const token =
-    scheme === "Bearer" && tokenFromHeader ? tokenFromHeader : tokenFromCookie;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    token = authHeader.split(" ")[1];
+  } else if (tokenFromCookie) {
+    token = tokenFromCookie;
+  }
 
   if (!token) {
     return res.status(401).json({ message: "Authentication required" });
@@ -18,14 +21,14 @@ export const authenticateToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = { id: decoded.id, email: decoded.email };
+    req.user = { id: decoded.id, email: decoded.email, role: decoded.role };
     next();
   } catch (error) {
     const msg =
       error.name === "TokenExpiredError"
         ? "Access token expired"
         : "Invalid token";
-    return res.status(500).json({ message: msg });
+    return res.status(401).json({ message: msg });
   }
 };
 

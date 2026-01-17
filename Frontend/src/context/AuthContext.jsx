@@ -33,7 +33,7 @@ export const AuthProvider = ({ children }) => {
         withCredentials: true,
       }
     );
-    const { user: userData, accessToken } = response.data;
+    const { user: userData, accessToken } = response.data.data;
     setUser(userData);
     setToken(accessToken);
     localStorage.setItem("user", JSON.stringify(userData));

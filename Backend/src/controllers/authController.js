@@ -99,6 +99,7 @@ export const loginUser = async (req, res) => {
           user.rows[0].candidateid ||
           user.rows[0].adminid,
         email: user.rows[0].email || user.rows[0].username,
+        firstName: user.rows[0].firstname,
         isVerified,
         role,
       },
@@ -109,7 +110,9 @@ export const loginUser = async (req, res) => {
         "Please verify your email address to access all features.";
     }
 
-    return res.status(200).json(response);
+    return res
+      .status(200)
+      .json({ message: "User login successful", data: response });
   } catch (err) {
     console.error("Login error:", err);
     return res
@@ -191,9 +194,9 @@ export const refreshToken = async (req, res) => {
 
     const tokenHash = hashToken(token);
     const doc = await pool.query(
-      `SELECT "refreshTokenID", token, "voterID", "candidateID", "adminID", "expiresAt", isActive 
-       FROM "refreshToken" 
-       WHERE token = $1 AND isActive = TRUE`,
+      `SELECT "refreshTokenid", token, "voterid", "candidateid", "adminid", "expiresat", isactive 
+       FROM "refreshtoken" 
+       WHERE token = $1 AND isactive = TRUE`,
       [tokenHash]
     );
 
@@ -215,19 +218,19 @@ export const refreshToken = async (req, res) => {
     const role = decoded.role;
     if (tokenRecord.voterid) {
       const userResult = await pool.query(
-        `SELECT * FROM voter WHERE "VoterID" = $1`,
+        `SELECT * FROM voter WHERE "voterid" = $1`,
         [tokenRecord.voterid]
       );
       user = userResult.rows[0];
     } else if (tokenRecord.candidateid) {
       const userResult = await pool.query(
-        `SELECT * FROM candidate WHERE "CandidateID" = $1`,
+        `SELECT * FROM candidate WHERE "candidateid" = $1`,
         [tokenRecord.candidateid]
       );
       user = userResult.rows[0];
     } else if (tokenRecord.adminid) {
       const userResult = await pool.query(
-        `SELECT * FROM admin WHERE "AdminID" = $1`,
+        `SELECT * FROM admin WHERE "adminid" = $1`,
         [tokenRecord.adminid]
       );
       user = userResult.rows[0];

@@ -43,3 +43,13 @@ export const getSignedUrl = async (path, expiredIn = 60) => {
     throw new Error(`Storage signed URL failed: ${error}`);
   }
 };
+
+export const getPublicUrl = (path) => {
+  if (!path) return null;
+  try {
+    const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+    return data.publicUrl;
+  } catch (error) {
+    throw new Error(`Storage public URL failed: ${error.message}`);
+  }
+};

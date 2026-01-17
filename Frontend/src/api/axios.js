@@ -1,14 +1,13 @@
 import axios from "axios";
-import dotenv from "dotenv";
 
-dotenv.config();
+const API_BaseUrl = import.meta.env.VITE_API_BASE_URL;
 
 const instance = axios.create({
-  baseURL: "http://localhost:5000/api/v1",
+  baseURL: API_BaseUrl,
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials: true, // Important for sending the httpOnly refresh token cookie
+  withCredentials: true,
 });
 
 instance.interceptors.request.use(

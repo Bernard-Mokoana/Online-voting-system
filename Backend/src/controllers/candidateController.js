@@ -3,7 +3,7 @@ import pool from "../config/db.js";
 import dotenv from "dotenv";
 import { generateEmailVerificationToken } from "../utils/token.utils.js";
 import { sendEmailVerification } from "../utils/email.utils.js";
-import { uploadFile } from "../utils/supabase-storage.js";
+import { uploadFile, getPublicUrl } from "../utils/supabase-storage.js";
 
 dotenv.config();
 export const registerCandidate = async (req, res) => {
@@ -86,8 +86,6 @@ export const registerCandidate = async (req, res) => {
 
     const candidateId = newCandidate.rows[0].candidateid;
 
-    console.log(candidateId);
-
     try {
       const verificationToken = await generateEmailVerificationToken(
         candidateId,
@@ -98,11 +96,16 @@ export const registerCandidate = async (req, res) => {
       console.error("Failed to send verification email:", emailError);
     }
 
+    const newCandidateData = newCandidate.rows[0];
+    if (newCandidateData.profileimage) {
+      newCandidateData.profileimage = getPublicUrl(newCandidateData.profileimage);
+    }
+
     return res.status(201).json({
       success: true,
       message:
         "Candidate created successfully. Please check your email to verify your account.",
-      data: newCandidate.rows[0],
+      data: newCandidateData,
     });
   } catch (err) {
     console.error("Registration error:", err);
@@ -114,32 +117,83 @@ export const registerCandidate = async (req, res) => {
 
 export const getCandidates = async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM candidate");
+    const { electionId } = req.query;
 
-    if (result.rows.length === 0)
+    let result;
+    let electionName = null;
+    if (electionId) {
+      const electionResult = await pool.query(
+        `SELECT "electionname" FROM election WHERE "electionid" = $1`,
+        [electionId]
+      );
+      if (electionResult.rows.length === 0) {
+        return res.status(404).json({ message: "Election not found" });
+      }
+      electionName = electionResult.rows[0].electionname;
+
+      result = await pool.query(
+        `SELECT * FROM candidate WHERE "electionid" = $1`,
+        [electionId]
+      );
+    } else {
+      result = await pool.query("SELECT * FROM candidate");
+    }
+
+    if (result.rows.length === 0) {
+      if (electionId) {
+        return res
+          .status(404)
+          .json({ message: "No candidates found for the specified election" });
+      }
       return res.status(404).json({ message: "Candidate not found" });
+    }
 
-    return res
-      .status(200)
-      .json({ message: "Candidates fetched successfully", data: result.rows });
+    const candidates = result.rows.map((candidate) => {
+      if (candidate.profileimage) {
+        candidate.profileimage = getPublicUrl(candidate.profileimage);
+      }
+      return candidate;
+    });
+
+    const response = {
+      message: "Candidates fetched successfully",
+      data: candidates,
+    };
+
+    if (electionName) {
+      response.electionName = electionName;
+    }
+
+    return res.status(200).json(response);
   } catch (error) {
     console.error("Error fetching candidates:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
 export const getCandidateById = async (req, res) => {
-  const { id } = req.params;
+  const { candidateId } = req.params;
+
   try {
-    const result = await pool.query("SELECT * FROM candidate WHERE id = $1", [
-      id,
-    ]);
+    const result = await pool.query(
+      `SELECT * FROM candidate WHERE "candidateid" = $1`,
+      [candidateId]
+    );
     if (result.rows.length === 0) {
       return res.status(404).json({ message: "Candidate not found" });
     }
-    return res.status(200).json({ message: "Candidate successfully fetched" });
+
+    const candidate = result.rows[0];
+    if (candidate.profileimage) {
+      candidate.profileimage = getPublicUrl(candidate.profileimage);
+    }
+
+    return res.status(200).json({
+      message: "Candidate successfully fetched",
+      data: candidate,
+    });
   } catch (error) {
     console.error("Error fetching candidate:", error);
-    res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -218,6 +272,7 @@ export const updateCandidate = async (req, res) => {
       }
     }
 
+    let updatedCandidateResult;
     if (querySet.length > 0) {
       fieldsUpdated = true;
       queryParams.push(candidateId);
@@ -225,21 +280,30 @@ export const updateCandidate = async (req, res) => {
         ", "
       )} WHERE "candidateid" = $${queryIndex} RETURNING *`;
 
-      await pool.query(updateQuery, queryParams);
+      updatedCandidateResult = await pool.query(updateQuery, queryParams);
     }
 
     if (!fieldsUpdated && !passwordUpdated) {
       return res.status(400).json({ message: "No fields to update" });
     }
 
-    const updatedCandidate = await pool.query(
-      `SELECT * FROM candidate WHERE "candidateid" = $1`,
-      [candidateId]
-    );
+    if (!updatedCandidateResult) {
+      updatedCandidateResult = await pool.query(
+        `SELECT * FROM candidate WHERE "candidateid" = $1`,
+        [candidateId]
+      );
+    }
+
+    const updatedCandidateData = updatedCandidateResult.rows[0];
+    if (updatedCandidateData.profileimage) {
+      updatedCandidateData.profileimage = getPublicUrl(
+        updatedCandidateData.profileimage
+      );
+    }
 
     return res.status(200).json({
       message: "Candidate updated successfully",
-      data: updatedCandidate.rows[0],
+      data: updatedCandidateData,
     });
   } catch (error) {
     console.error("error updating candidate", error);
@@ -280,8 +344,42 @@ export const deleteCandidate = async (req, res) => {
       candidateId,
     ]);
 
-    return res.status(200).json({ message: "candidate deleted successfully" });
+    return res.status(200).json({ message: "Candidate deleted successfully" });
   } catch (error) {
+    return res.status(500).json({ message: "Internal server error", error });
+  }
+};
+
+export const getCandidateElections = async (req, res) => {
+  try {
+    const candidateId = req.user.id;
+
+    const candidateResult = await pool.query(
+      `SELECT "electionid" FROM candidate WHERE "candidateid" = $1`,
+      [candidateId]
+    );
+
+    if (candidateResult.rows.length === 0) {
+      return res.status(404).json({ message: "Candidate not found" });
+    }
+
+    const electionId = candidateResult.rows[0].electionid;
+
+    const electionResult = await pool.query(
+      `SELECT * FROM election WHERE "electionid" = $1`,
+      [electionId]
+    );
+
+    if (electionResult.rows.length === 0) {
+      return res.status(404).json({ message: "Election not found" });
+    }
+
+    return res.status(200).json({
+      message: "Election fetched successfully",
+      data: electionResult.rows,
+    });
+  } catch (error) {
+    console.error("Error fetching candidate elections:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
