@@ -11,7 +11,14 @@ export default defineConfig({
   server: {
     port: 5173,
     open: true,
-    host: true,
+    host: 'localhost',
+    hmr: {
+      host: 'localhost',
+      protocol: 'ws'
+    },
+    watch: {
+      usePolling: true
+    }
   },
   resolve: {
     alias: {
