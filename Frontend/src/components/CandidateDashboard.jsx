@@ -36,8 +36,13 @@ const CandidateDashboard = () => {
           axios.get("/candidates/elections"),
           axios.get(`/candidates/${authUser.id}`),
         ]);
-
-        setParticipatedElections(electionsResponse.data.data || []);
+        const elections = electionsResponse.data.data || [];
+        const uniqueElections = elections.filter(
+          (election, index, self) =>
+            index ===
+            self.findIndex((t) => t.electionId === election.electionId)
+        );
+        setParticipatedElections(uniqueElections);
         setCandidateProfile(candidateResponse.data.data);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
@@ -51,7 +56,7 @@ const CandidateDashboard = () => {
 
   const handleLogout = () => {
     logout();
-    navigate("/");
+    navigate("/candidate-login");
   };
 
   if (loading) return <CircularProgress />;
@@ -68,7 +73,7 @@ const CandidateDashboard = () => {
       >
         <Typography variant="h5" component="div">
           Welcome,{" "}
-          {candidateProfile?.firstname || authUser?.firstName || "Candidate"}!
+          {candidateProfile?.firstName || authUser?.firstName || "Candidate"}!
         </Typography>
         <Button
           variant="contained"
@@ -85,14 +90,14 @@ const CandidateDashboard = () => {
           <Grid container spacing={3}>
             <Grid item>
               <Avatar
-                src={candidateProfile.profileimage}
-                alt={`${candidateProfile.firstname} ${candidateProfile.lastname}`}
+                src={candidateProfile.profileImage}
+                alt={`${candidateProfile.firstName} ${candidateProfile.lastName}`}
                 sx={{ width: 120, height: 120 }}
               />
             </Grid>
             <Grid item xs>
               <Typography variant="h6">
-                {candidateProfile.firstname} {candidateProfile.lastname}
+                {candidateProfile.firstName} {candidateProfile.lastName}
               </Typography>
               <Typography variant="subtitle1" color="text.secondary">
                 {candidateProfile.position}
@@ -117,19 +122,19 @@ const CandidateDashboard = () => {
           </Alert>
         ) : (
           <Grid container spacing={2}>
-            {participatedElections.map((election) => (
-              <Grid item xs={12} md={6} key={election.electionid}>
+            {participatedElections.map((election, index) => (
+              <Grid item xs={12} md={6} key={`${election.electionId}-${index}`}>
                 <Card variant="outlined">
                   <CardContent>
                     <Typography variant="h6">
-                      {election.electionname}
+                      {election.electionName}
                     </Typography>
                     <Typography color="text.secondary" paragraph>
                       {election.description}
                     </Typography>
                     <Typography variant="body2">
                       End Date:{" "}
-                      {new Date(election.enddate).toLocaleDateString()}
+                      {new Date(election.endDate).toLocaleDateString()}
                     </Typography>
                   </CardContent>
                   <CardActions>
@@ -137,7 +142,7 @@ const CandidateDashboard = () => {
                       size="small"
                       startIcon={<Info />}
                       onClick={() =>
-                        navigate(`/elections/${election.electionid}`)
+                        navigate(`/elections/${election.electionId}`)
                       }
                     >
                       View Details
@@ -147,7 +152,7 @@ const CandidateDashboard = () => {
                       variant="contained"
                       startIcon={<HowToVote />}
                       onClick={() =>
-                        navigate(`/elections/${election.electionid}/results`)
+                        navigate(`/elections/${election.electionId}/results`)
                       }
                     >
                       View Results

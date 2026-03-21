@@ -11,25 +11,25 @@ import {
   Alert,
 } from "@mui/material";
 import { Add, Edit, Delete, Visibility, Info } from "@mui/icons-material";
-import axios from "axios";
+import axios from "../api/axios";
 
 const AdminDashboard = () => {
   // Mock data for fallback
   const mockElections = useMemo(
     () => [
       {
-        ElectionID: 1,
-        ElectionName: "Presidential Election 2025",
-        Description: "Vote for the next president.",
-        StartDate: "2025-05-01T08:00:00Z",
-        EndDate: "2025-05-10T18:00:00Z",
+        electionId: 1,
+        electionName: "Presidential Election 2025",
+        description: "Vote for the next president.",
+        startDate: "2025-05-01T08:00:00Z",
+        endDate: "2025-05-10T18:00:00Z",
       },
       {
-        ElectionID: 2,
-        ElectionName: "Local Council Election 2025",
-        Description: "Vote for your local council representatives.",
-        StartDate: "2025-06-01T08:00:00Z",
-        EndDate: "2025-06-05T18:00:00Z",
+        electionId: 2,
+        electionName: "Local Council Election 2025",
+        description: "Vote for your local council representatives.",
+        startDate: "2025-06-01T08:00:00Z",
+        endDate: "2025-06-05T18:00:00Z",
       },
     ],
     []
@@ -41,9 +41,8 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchElections = async () => {
       try {
-        // Fetch data from the backend
-        const response = await axios.get("/api/elections");
-        setElections(response.data);
+        const response = await axios.get("/elections");
+        setElections(response.data.data || []);
       } catch (error) {
         console.error("Backend error:", error);
         // Fallback to mock data
@@ -119,26 +118,26 @@ const AdminDashboard = () => {
         ) : (
           <Grid container spacing={2}>
             {elections.map((election) => (
-              <Grid item xs={12} key={election.ElectionID}>
+              <Grid item xs={12} key={election.electionId}>
                 <Card variant="outlined">
                   <CardContent>
                     <Typography variant="h6">
-                      {election.ElectionName}
+                      {election.electionName}
                     </Typography>
                     <Typography color="text.secondary" paragraph>
-                      {election.Description}
+                      {election.description}
                     </Typography>
                     <Grid container spacing={2}>
                       <Grid item xs={6}>
                         <Typography variant="body2">
                           <strong>Start:</strong>{" "}
-                          {new Date(election.StartDate).toLocaleString()}
+                          {new Date(election.startDate).toLocaleString()}
                         </Typography>
                       </Grid>
                       <Grid item xs={6}>
                         <Typography variant="body2">
                           <strong>End:</strong>{" "}
-                          {new Date(election.EndDate).toLocaleString()}
+                          {new Date(election.endDate).toLocaleString()}
                         </Typography>
                       </Grid>
                     </Grid>
@@ -147,21 +146,21 @@ const AdminDashboard = () => {
                     <Button
                       size="small"
                       startIcon={<Edit />}
-                      onClick={() => handleEditElection(election.ElectionID)}
+                      onClick={() => handleEditElection(election.electionId)}
                     >
                       Edit
                     </Button>
                     <Button
                       size="small"
                       startIcon={<Delete />}
-                      onClick={() => handleDeleteElection(election.ElectionID)}
+                      onClick={() => handleDeleteElection(election.electionId)}
                     >
                       Delete
                     </Button>
                     <Button
                       size="small"
                       startIcon={<Visibility />}
-                      onClick={() => handleViewDetails(election.ElectionName)}
+                      onClick={() => handleViewDetails(election.electionName)}
                     >
                       View Details
                     </Button>

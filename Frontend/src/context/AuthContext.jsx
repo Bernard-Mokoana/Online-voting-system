@@ -49,8 +49,39 @@ export const AuthProvider = ({ children }) => {
     delete axios.defaults.headers.common["Authorization"];
   };
 
+  const register = async (
+    firstName,
+    lastName,
+    email,
+    idNumber,
+    dataOfBirth,
+    phoneNumber,
+    password,
+    profileImage
+  ) => {
+    const formData = new FormData();
+    formData.append("firstName", firstName);
+    formData.append("lastName", lastName);
+    formData.append("email", email);
+    formData.append("idNumber", idNumber);
+    formData.append("dataOfBirth", dataOfBirth);
+    formData.append("phoneNumber", phoneNumber);
+    formData.append("password", password);
+    if (profileImage) {
+      formData.append("avatar", profileImage);
+    }
+
+    const response = await axios.post("/voters/register", formData, {
+      headers: { "Content-Type": "multipart/form-data" }, // Axios will set boundary automatically
+      withCredentials: true,
+    });
+    return response.data;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
+    <AuthContext.Provider
+      value={{ user, token, login, logout, register, loading }}
+    >
       {children}
     </AuthContext.Provider>
   );

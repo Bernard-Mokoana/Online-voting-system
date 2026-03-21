@@ -10,6 +10,19 @@ DROP TABLE IF EXISTS Address CASCADE;
 DROP TABLE IF EXISTS Admin CASCADE;
 DROP TABLE IF EXISTS refreshToken CASCADE;
 DROP TABLE IF EXISTS Address CASCADE;
+
+DROP TABLE IF EXISTS resetpasswordtoken CASCADE;
+DROP TABLE IF EXISTS emailverificationtoken CASCADE;
+
+DROP VIEW IF EXISTS ActiveElections CASCADE;
+DROP VIEW IF EXISTS ElectionResults CASCADE;
+DROP VIEW IF EXISTS VoterStatistics CASCADE;
+
+DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;
+DROP FUNCTION IF EXISTS update_voter_has_voted() CASCADE;
+DROP FUNCTION IF EXISTS check_election_active() CASCADE;
+
+
 CREATE TABLE Address (
     AddressID SERIAL PRIMARY KEY,
     Country VARCHAR(100) NOT NULL,
@@ -41,6 +54,7 @@ CREATE TABLE voter (
     DateOfBirth DATE NOT NULL,
     AddressID INTEGER,
     PhoneNumber VARCHAR(20),
+    ProfileImageUrl TEXT,
     HasVoted BOOLEAN DEFAULT FALSE,
     IsVerified BOOLEAN DEFAULT FALSE,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -424,18 +438,18 @@ INSERT INTO Admin (Username, Password) VALUES
     ('admin', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi');  -- password: adminpass
 
 -- Insert sample voters
-INSERT INTO Voter (FirstName, LastName, Email, IdNumber, Password, DateOfBirth, AddressID, PhoneNumber, IsVerified) VALUES
-    ('John', 'Doe', 'john.doe@example.com', '9001011234567', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '1990-01-01', 1, '+27123456789', TRUE),
-    ('Jane', 'Smith', 'jane.smith@example.com', '8505159876543', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '1985-05-15', 2, '+27987654321', TRUE),
-    ('Bob', 'Johnson', 'bob.johnson@example.com', '9210204567891', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '1992-10-20', 3, '+27112233445', TRUE),
-    ('Alice', 'Williams', 'alice.williams@example.com', '8807071112223', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '1988-07-07', 4, '+27556677889', TRUE),
-    ('Charlie', 'Brown', 'charlie.brown@example.com', '9503034445556', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '1995-03-03', 5, '+27445566778', TRUE);
+INSERT INTO Voter (FirstName, LastName, Email, IdNumber, Password, DateOfBirth, AddressID, PhoneNumber, IsVerified, ProfileImageUrl) VALUES
+    ('John', 'Doe', 'john.doe@example.com', '9001011234567', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '1990-01-01', 1, '+27123456789', TRUE, 'https://example.com/profile/john.jpg'),
+    ('Jane', 'Smith', 'jane.smith@example.com', '8505159876543', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '1985-05-15', 2, '+27987654321', TRUE, 'https://example.com/profile/jane.jpg'),
+    ('Bob', 'Johnson', 'bob.johnson@example.com', '9210204567891', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '1992-10-20', 3, '+27112233445', TRUE, 'https://example.com/profile/bob.jpg'),
+    ('Alice', 'Williams', 'alice.williams@example.com', '8807071112223', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '1988-07-07', 4, '+27556677889', TRUE, 'https://example.com/profile/alice.jpg'),
+    ('Charlie', 'Brown', 'charlie.brown@example.com', '9503034445556', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '1995-03-03', 5, '+27445566778', TRUE, 'https://example.com/profile/charlie.jpg');
 
 -- Insert sample elections
 INSERT INTO Election (ElectionTypeID, ElectionName, AdminID, StartDate, EndDate, IsActive, Description) VALUES
-    (1, '2024 Presidential Election', 1, '2024-01-01 00:00:00', '2024-12-31 23:59:59', TRUE, 'National presidential election for 2024'),
+    (1, '2024 Presidential Election', 1, '2025-12-01 00:00:00', '2099-12-31 23:59:59', TRUE, 'National presidential election for 2024'),
     (2, '2024 Parliamentary Election', 1, '2024-05-01 00:00:00', '2024-05-31 23:59:59', FALSE, 'Parliamentary election for 2024'),
-    (3, 'Local Government Election 2024', 1, '2024-08-01 00:00:00', '2024-08-31 23:59:59', TRUE, 'Municipal elections across provinces');
+    (3, 'Local Government Election 2024', 1, '2026-01-01 00:00:00', '2099-12-31 23:59:59', TRUE, 'Municipal elections across provinces');
 
 -- Insert sample candidates
 INSERT INTO Candidate (FirstName, LastName, IdNumber, Email, Password, Position, Biography, IsVerified, ElectionID) VALUES

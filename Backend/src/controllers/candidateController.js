@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { generateEmailVerificationToken } from "../utils/token.utils.js";
 import { sendEmailVerification } from "../utils/email.utils.js";
 import { uploadFile, getPublicUrl } from "../utils/supabase-storage.js";
+import { mapCandidateRow, mapElectionRow } from "../utils/mappers.js";
 
 dotenv.config();
 export const registerCandidate = async (req, res) => {
@@ -98,14 +99,21 @@ export const registerCandidate = async (req, res) => {
 
     const newCandidateData = newCandidate.rows[0];
     if (newCandidateData.profileimage) {
-      newCandidateData.profileimage = getPublicUrl(newCandidateData.profileimage);
+      newCandidateData.profileimage = getPublicUrl(
+        newCandidateData.profileimage,
+        {
+          width: 120,
+          height: 120,
+          resize: "cover",
+        }
+      );
     }
 
     return res.status(201).json({
       success: true,
       message:
         "Candidate created successfully. Please check your email to verify your account.",
-      data: newCandidateData,
+      data: mapCandidateRow(newCandidateData),
     });
   } catch (err) {
     console.error("Registration error:", err);
@@ -141,23 +149,29 @@ export const getCandidates = async (req, res) => {
 
     if (result.rows.length === 0) {
       if (electionId) {
-        return res
-          .status(404)
-          .json({ message: "No candidates found for the specified election" });
+        return res.status(200).json({
+          message: "No candidates found for the specified election",
+          data: [],
+        });
       }
-      return res.status(404).json({ message: "Candidate not found" });
+      return res.status(200).json({ message: "No candidates found", data: [] });
     }
 
     const candidates = result.rows.map((candidate) => {
       if (candidate.profileimage) {
-        candidate.profileimage = getPublicUrl(candidate.profileimage);
+        candidate.profileimage = getPublicUrl(candidate.profileimage, {
+          width: 120,
+          height: 120,
+          resize: "cover",
+        });
       }
       return candidate;
     });
 
     const response = {
+      success: true,
       message: "Candidates fetched successfully",
-      data: candidates,
+      data: candidates.map(mapCandidateRow),
     };
 
     if (electionName) {
@@ -183,13 +197,20 @@ export const getCandidateById = async (req, res) => {
     }
 
     const candidate = result.rows[0];
+    console.log("Raw profileimage path from DB:", candidate.profileimage);
     if (candidate.profileimage) {
-      candidate.profileimage = getPublicUrl(candidate.profileimage);
+      candidate.profileimage = getPublicUrl(candidate.profileimage, {
+        width: 120,
+        height: 120,
+        resize: "cover",
+      });
+      console.log("Generated public URL with transform:", candidate.profileimage);
     }
 
     return res.status(200).json({
+      success: true,
       message: "Candidate successfully fetched",
-      data: candidate,
+      data: mapCandidateRow(candidate),
     });
   } catch (error) {
     console.error("Error fetching candidate:", error);
@@ -297,13 +318,19 @@ export const updateCandidate = async (req, res) => {
     const updatedCandidateData = updatedCandidateResult.rows[0];
     if (updatedCandidateData.profileimage) {
       updatedCandidateData.profileimage = getPublicUrl(
-        updatedCandidateData.profileimage
+        updatedCandidateData.profileimage,
+        {
+          width: 120,
+          height: 120,
+          resize: "cover",
+        }
       );
     }
 
     return res.status(200).json({
+      success: true,
       message: "Candidate updated successfully",
-      data: updatedCandidateData,
+      data: mapCandidateRow(updatedCandidateData),
     });
   } catch (error) {
     console.error("error updating candidate", error);
@@ -375,8 +402,9 @@ export const getCandidateElections = async (req, res) => {
     }
 
     return res.status(200).json({
+      success: true,
       message: "Election fetched successfully",
-      data: electionResult.rows,
+      data: electionResult.rows.map(mapElectionRow),
     });
   } catch (error) {
     console.error("Error fetching candidate elections:", error);

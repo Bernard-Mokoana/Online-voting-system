@@ -15,7 +15,15 @@ import CandidateRegister from "./pages/CandidateRegister";
 import VoterDashboard from "./components/VoterDashboard";
 import AdminDashboard from "./components/AdminDashboard";
 import CandidateDashboard from "./components/CandidateDashboard";
+import ElectionDetails from "./pages/ElectionDetails";
 import RoleSelection from "./pages/RoleSelection";
+import Vote from "./pages/Vote";
+import ElectionResults from "./pages/ElectionResults";
+import VotingHistory from "./pages/VotingHistory";
+import Elections from "./pages/Elections";
+import Candidates from "./pages/Candidates";
+import Users from "./pages/Users";
+import Profile from "./pages/Profile";
 
 const theme = createTheme({
   palette: {
@@ -37,6 +45,14 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/" />;
   }
 
+  return children;
+};
+
+const RoleRoute = ({ children, roles }) => {
+  const { user } = useAuth();
+  if (!user || !roles.includes(user.role)) {
+    return <Navigate to="/" />;
+  }
   return children;
 };
 
@@ -96,7 +112,9 @@ function AppRoutes() {
         path="/admin-dashboard"
         element={
           <ProtectedRoute>
-            <AdminDashboard />
+            <RoleRoute roles={["admin"]}>
+              <AdminDashboard />
+            </RoleRoute>
           </ProtectedRoute>
         }
       />
@@ -104,7 +122,83 @@ function AppRoutes() {
         path="/candidate-dashboard"
         element={
           <ProtectedRoute>
-            <CandidateDashboard />
+            <RoleRoute roles={["candidate"]}>
+              <CandidateDashboard />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/elections/:electionId"
+        element={
+          <ProtectedRoute>
+            <ElectionDetails />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/elections/:electionId/vote"
+        element={
+          <ProtectedRoute>
+            <RoleRoute roles={["voter"]}>
+              <Vote />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/elections/:electionId/results"
+        element={
+          <ProtectedRoute>
+            <ElectionResults />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/voting-history"
+        element={
+          <ProtectedRoute>
+            <RoleRoute roles={["voter"]}>
+              <VotingHistory />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/elections"
+        element={
+          <ProtectedRoute>
+            <RoleRoute roles={["admin"]}>
+              <Elections />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/candidates"
+        element={
+          <ProtectedRoute>
+            <RoleRoute roles={["admin"]}>
+              <Candidates />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <ProtectedRoute>
+            <RoleRoute roles={["admin"]}>
+              <Users />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
           </ProtectedRoute>
         }
       />

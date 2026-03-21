@@ -26,8 +26,8 @@ const VotingHistory = () => {
 
   const fetchVotingHistory = async () => {
     try {
-      const response = await axios.get("/api/votes/history");
-      setVotes(response.data);
+      const response = await axios.get("/votes/history");
+      setVotes(response.data.data || []);
     } catch (err) {
       setError("Failed to fetch voting history");
     } finally {
@@ -72,13 +72,13 @@ const VotingHistory = () => {
               </TableHead>
               <TableBody>
                 {votes.map((vote) => (
-                  <TableRow key={vote.id}>
-                    <TableCell>{vote.election.title}</TableCell>
+                  <TableRow key={vote.voteId}>
+                    <TableCell>{vote.election.electionName}</TableCell>
                     <TableCell>
                       {`${vote.candidate.firstName} ${vote.candidate.lastName}`}
                     </TableCell>
                     <TableCell>
-                      {new Date(vote.createdAt).toLocaleString()}
+                      {new Date(vote.votedAt).toLocaleString()}
                     </TableCell>
                   </TableRow>
                 ))}

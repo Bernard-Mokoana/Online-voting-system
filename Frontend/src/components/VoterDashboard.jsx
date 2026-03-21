@@ -10,6 +10,7 @@ import {
   CardActions,
   Alert,
   CircularProgress,
+  Avatar,
 } from "@mui/material";
 import { CalendarToday, Info, HowToVote, History } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
@@ -18,7 +19,7 @@ import { useAuth } from "../hooks/useAuth";
 
 const VoterDashboard = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [activeElections, setActiveElections] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -36,13 +37,37 @@ const VoterDashboard = () => {
     fetchDashboardData();
   }, []);
 
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
   if (loading) return <CircularProgress />;
 
   return (
     <Box sx={{ p: 2 }}>
-      <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
-        Welcome, {user?.firstName || "Voter"}!
-      </Typography>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center" }}>
+          <Avatar
+            alt={user?.firstName || "Voter"}
+            src={user?.profileImageUrl}
+            sx={{ width: 56, height: 56, mr: 2 }}
+          />
+          <Typography variant="h5" gutterBottom>
+            Welcome, {user?.firstName || "Voter"}!
+          </Typography>
+        </Box>
+        <Button variant="outlined" color="secondary" onClick={handleLogout}>
+          Logout
+        </Button>
+      </Box>
 
       <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" gutterBottom>
@@ -55,18 +80,18 @@ const VoterDashboard = () => {
         ) : (
           <Grid container spacing={2}>
             {activeElections.map((election) => (
-              <Grid item xs={12} md={6} key={election.electionid}>
+              <Grid item xs={12} md={6} key={election.electionId}>
                 <Card variant="outlined">
                   <CardContent>
                     <Typography variant="h6">
-                      {election.electionname}
+                      {election.electionName}
                     </Typography>
                     <Typography color="text.secondary" paragraph>
                       {election.description}
                     </Typography>
                     <Typography variant="body2">
                       End Date:{" "}
-                      {new Date(election.enddate).toLocaleDateString()}
+                      {new Date(election.endDate).toLocaleDateString()}
                     </Typography>
                   </CardContent>
                   <CardActions>
@@ -74,7 +99,7 @@ const VoterDashboard = () => {
                       size="small"
                       startIcon={<Info />}
                       onClick={() =>
-                        navigate(`/elections/${election.electionid}`)
+                        navigate(`/elections/${election.electionId}`)
                       }
                     >
                       Details
@@ -84,7 +109,7 @@ const VoterDashboard = () => {
                       variant="contained"
                       startIcon={<HowToVote />}
                       onClick={() =>
-                        navigate(`/elections/${election.electionid}/vote`)
+                        navigate(`/elections/${election.electionId}/vote`)
                       }
                     >
                       Vote Now

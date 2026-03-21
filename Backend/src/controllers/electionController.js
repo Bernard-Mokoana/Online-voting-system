@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import { mapElectionRow, mapVoteResultRow } from "../utils/mappers.js";
 
 export const createElection = async (req, res) => {
   try {
@@ -13,7 +14,9 @@ export const createElection = async (req, res) => {
     } = req.body;
 
     if (!ElectionName || !Description || !StartDate || !EndDate) {
-      return res.status(400).json({ message: "All the fields are required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "All fields are required" });
     }
 
     const result = await pool.query(
@@ -31,12 +34,15 @@ export const createElection = async (req, res) => {
     );
 
     return res.status(201).json({
+      success: true,
       message: "Election created successfully",
-      election: result.rows[0],
+      data: mapElectionRow(result.rows[0]),
     });
   } catch (error) {
     console.error("Error creating election:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 export const getAllElections = async (req, res) => {
@@ -45,16 +51,18 @@ export const getAllElections = async (req, res) => {
       "SELECT * FROM Election ORDER BY CreatedAt DESC"
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Elections not found" });
-    }
-
     return res
       .status(200)
-      .json({ message: "All elections fetched successfully" }, result.rows);
+      .json({
+        success: true,
+        message: "All elections fetched successfully",
+        data: result.rows.map(mapElectionRow),
+      });
   } catch (error) {
     console.error("Error fetching elections:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -62,42 +70,50 @@ export const getActiveElections = async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM ActiveElections");
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Elections not found" });
-    }
-
     return res
       .status(200)
-      .json({ message: "Active elections fetched successfully" }, result.rows);
+      .json({
+        success: true,
+        message: "Active elections fetched successfully",
+        data: result.rows.map(mapElectionRow),
+      });
   } catch (error) {
     console.error("Error fetching active elections:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
 export const getElectionById = async (req, res) => {
   try {
-    const { ElectionID } = req.params;
+    const { id } = req.params;
     const result = await pool.query(
       "SELECT * FROM Election WHERE ElectionID = $1",
-      [ElectionID]
+      [id]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Election not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Election not found" });
     }
 
-    return res
-      .status(200)
-      .json({ message: "Election fetched successfully" }, result.rows[0]);
+    return res.status(200).json({
+      success: true,
+      message: "Election fetched successfully",
+      data: mapElectionRow(result.rows[0]),
+    });
   } catch (error) {
     console.error("Error fetching election:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 export const updateElection = async (req, res) => {
   try {
-    const { ElectionID } = req.params;
+    const { id } = req.params;
     const {
       ElectionName,
       Description,
@@ -109,7 +125,9 @@ export const updateElection = async (req, res) => {
     } = req.body;
 
     if (!ElectionName || !Description || !StartDate || !EndDate) {
-      return res.status(400).json({ message: "All the fields are required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "All fields are required" });
     }
 
     const result = await pool.query(
@@ -130,66 +148,84 @@ export const updateElection = async (req, res) => {
         IsActive,
         ElectionTypeID,
         AdminID,
-        ElectionID,
+        id,
       ]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Election not found" });
-    }
-
-    return res.status(201).json({
-      message: "Election updated successfully",
-      election: result.rows[0],
-    });
-  } catch (error) {
-    console.error("Error updating election:", error);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-};
-
-export const deleteElection = async (req, res) => {
-  try {
-    const { ElectionID } = req.params;
-
-    const result = await pool.query(
-      "DELETE FROM Election WHERE ElectionID = $1 RETURNING *",
-      [ElectionID]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Election not found" });
-    }
-
-    return res.json({
-      message: "Election deleted successfully",
-      election: result.rows[0],
-    });
-  } catch (error) {
-    console.error("Error deleting election:", error);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-};
-
-export const getElectionResults = async (req, res) => {
-  try {
-    const { ElectionID } = req.params;
-    const result = await pool.query(
-      "SELECT * FROM ElectionResults WHERE ElectionID = $1",
-      [ElectionID]
     );
 
     if (result.rows.length === 0) {
       return res
         .status(404)
-        .json({ message: "No results found for this election" });
+        .json({ success: false, message: "Election not found" });
     }
 
+    return res.status(200).json({
+      success: true,
+      message: "Election updated successfully",
+      data: mapElectionRow(result.rows[0]),
+    });
+  } catch (error) {
+    console.error("Error updating election:", error);
     return res
-      .status(200)
-      .json({ message: "Results fetched successfully" }, result.rows);
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const deleteElection = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      "DELETE FROM Election WHERE ElectionID = $1 RETURNING *",
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Election not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Election deleted successfully",
+      data: mapElectionRow(result.rows[0]),
+    });
+  } catch (error) {
+    console.error("Error deleting election:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const getElectionResults = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      "SELECT * FROM ElectionResults WHERE ElectionID = $1",
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message: "No results found for this election",
+          data: [],
+        });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Results fetched successfully",
+      data: result.rows.map(mapVoteResultRow),
+    });
   } catch (error) {
     console.error("Error fetching election results:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };

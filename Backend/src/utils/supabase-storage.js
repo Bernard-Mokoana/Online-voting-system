@@ -4,7 +4,8 @@ const BUCKET = "Voting-assets";
 
 export const uploadFile = async (folder, file) => {
   try {
-    const fileName = `${folder}/${Date.now()} - ${file.originalname}`;
+    const extension = file.originalname.split(".").pop();
+    const fileName = `${folder}/${Date.now()}.${extension}`;
 
     const { error } = await supabase.storage
       .from(BUCKET)
@@ -44,10 +45,11 @@ export const getSignedUrl = async (path, expiredIn = 60) => {
   }
 };
 
-export const getPublicUrl = (path) => {
+export const getPublicUrl = (path, transformOptions = null) => {
   if (!path) return null;
   try {
-    const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+    const options = transformOptions ? { transform: transformOptions } : {};
+    const { data } = supabase.storage.from(BUCKET).getPublicUrl(path, options);
     return data.publicUrl;
   } catch (error) {
     throw new Error(`Storage public URL failed: ${error.message}`);

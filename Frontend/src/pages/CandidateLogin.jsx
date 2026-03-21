@@ -101,7 +101,7 @@ const Login = () => {
               <Link to="/admin-login" style={{ textDecoration: "none" }}>
                 <Button color="secondary">Admin Login</Button>
               </Link>
-              <Link to="/voter-login" style={{ textDecoration: "none" }}>
+              <Link to="/login" style={{ textDecoration: "none" }}>
                 <Button color="secondary">Voter Login</Button>
               </Link>
             </Typography>

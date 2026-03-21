@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import morgan from "morgan";
+import cookieParser from "cookie-parser";
 
 dotenv.config();
 
@@ -12,12 +13,13 @@ app.use(
     origin: [
       "http://localhost:5173",
       "http://192.168.56.1:5173",
-      " http://192.168.0.150:5173",
+      "http://192.168.0.150:5173",
     ],
     credentials: true,
   })
 );
 app.use(express.json());
+app.use(cookieParser());
 app.use(morgan("dev"));
 
 import voterRoutes from "./routes/voterRoutes.js";

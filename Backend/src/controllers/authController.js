@@ -70,7 +70,7 @@ export const loginUser = async (req, res) => {
     if (!validPassword)
       return res
         .status(401)
-        .json({ success: false, error: "Invalid credentials" });
+        .json({ success: false, message: "Invalid credentials" });
 
     const isVerified = role === "voter" ? user.rows[0].IsVerified : false;
 
@@ -100,6 +100,8 @@ export const loginUser = async (req, res) => {
           user.rows[0].adminid,
         email: user.rows[0].email || user.rows[0].username,
         firstName: user.rows[0].firstname,
+        lastName: user.rows[0].lastname,
+        profileImageUrl: user.rows[0].profileimageurl || user.rows[0].profileimage,
         isVerified,
         role,
       },
@@ -117,7 +119,7 @@ export const loginUser = async (req, res) => {
     console.error("Login error:", err);
     return res
       .status(500)
-      .json({ success: false, error: "Login failed, Internal server error" });
+      .json({ success: false, message: "Login failed, internal server error" });
   }
 };
 

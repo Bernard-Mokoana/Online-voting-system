@@ -1,6 +1,6 @@
 import express from "express";
 import { loginUser, logoutUser } from "../controllers/authController.js";
-import { getDashboardStats } from "../controllers/adminController.js";
+import { getDashboardStats, getUsers } from "../controllers/adminController.js";
 import { authenticateToken, authorizeRole } from "../middlewares/auth.js";
 
 const adminRouter = express.Router();
@@ -11,8 +11,9 @@ adminRouter.post("/logout", logoutUser);
 adminRouter.get(
   "/dashboard",
   authenticateToken,
-  authorizeRole,
+  authorizeRole(["admin"]),
   getDashboardStats
 );
+adminRouter.get("/users", authenticateToken, authorizeRole(["admin"]), getUsers);
 
 export default adminRouter;

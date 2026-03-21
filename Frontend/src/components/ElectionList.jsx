@@ -61,28 +61,27 @@ const ElectionList = ({ type = "active" }) => {
         </Grid>
       ) : (
         elections.map((election) => (
-          <Grid item xs={12} md={6} lg={4} key={election.electionid}>
+          <Grid item xs={12} md={6} lg={4} key={election.electionId}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  {/* PostgreSQL returns lowercase column names */}
-                  {election.electionname}
+                  {election.electionName}
                 </Typography>
                 <Typography color="text.secondary" gutterBottom>
                   {election.description}
                 </Typography>
                 <Typography variant="body2">
-                  Start: {new Date(election.startdate).toLocaleDateString()}
+                  Start: {new Date(election.startDate).toLocaleDateString()}
                 </Typography>
                 <Typography variant="body2">
-                  End: {new Date(election.enddate).toLocaleDateString()}
+                  End: {new Date(election.endDate).toLocaleDateString()}
                 </Typography>
               </CardContent>
               <CardActions>
                 <Button
                   size="small"
                   color="primary"
-                  onClick={() => navigate(`/elections/${election.electionid}`)}
+                  onClick={() => navigate(`/elections/${election.electionId}`)}
                 >
                   View Details
                 </Button>
@@ -90,9 +89,7 @@ const ElectionList = ({ type = "active" }) => {
                   <Button
                     size="small"
                     color="secondary"
-                    onClick={() =>
-                      navigate(`/elections/${election.electionid}/vote`)
-                    }
+                    onClick={() => navigate(`/elections/${election.electionId}/vote`)}
                   >
                     Vote Now
                   </Button>

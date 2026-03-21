@@ -28,11 +28,11 @@ const ElectionDetails = () => {
     const fetchElectionDetails = async () => {
       try {
         const [electionResponse, candidatesResponse] = await Promise.all([
-          axios.get(`/api/elections/${electionId}`),
-          axios.get(`/api/elections/${electionId}/candidates`),
+          axios.get(`/elections/${electionId}`),
+          axios.get(`/candidates?electionId=${electionId}`),
         ]);
-        setElection(electionResponse.data);
-        setCandidates(candidatesResponse.data);
+        setElection(electionResponse.data.data || null);
+        setCandidates(candidatesResponse.data.data || []);
       } catch (err) {
         setError("Failed to fetch election details");
       } finally {
@@ -69,7 +69,7 @@ const ElectionDetails = () => {
     <Container maxWidth="lg">
       <Paper elevation={3} sx={{ p: 4, mt: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>
-          {election.title}
+          {election.electionName}
         </Typography>
         <Typography color="text.secondary" paragraph>
           {election.description}
@@ -107,14 +107,14 @@ const ElectionDetails = () => {
 
         <Grid container spacing={3}>
           {candidates.map((candidate) => (
-            <Grid item xs={12} sm={6} md={4} key={candidate.id}>
+            <Grid item xs={12} sm={6} md={4} key={candidate.candidateId}>
               <Card>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
                     {`${candidate.firstName} ${candidate.lastName}`}
                   </Typography>
                   <Typography color="text.secondary" paragraph>
-                    {candidate.bio}
+                    {candidate.biography}
                   </Typography>
                 </CardContent>
               </Card>

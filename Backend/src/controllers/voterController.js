@@ -3,10 +3,18 @@ import pool from "../config/db.js";
 import dotenv from "dotenv";
 import { generateEmailVerificationToken } from "../utils/token.utils.js";
 import { sendEmailVerification } from "../utils/email.utils.js";
+import {
+  uploadFile,
+  deleteFile,
+  getPublicUrl,
+} from "../utils/supabase-storage.js";
+import { mapVoterRow } from "../utils/mappers.js";
+import { withTransaction } from "../utils/db.utils.js";
 
 dotenv.config();
 
 export const registerUser = async (req, res) => {
+  let uploadedPath = null;
   try {
     const {
       firstName,
@@ -29,7 +37,7 @@ export const registerUser = async (req, res) => {
     )
       return res
         .status(400)
-        .json({ success: false, error: "All fields are required" });
+        .json({ success: false, message: "All fields are required" });
 
     const existing = await pool.query(
       `SELECT "voterid" FROM voter WHERE "email" = $1`,
@@ -38,29 +46,46 @@ export const registerUser = async (req, res) => {
     if (existing.rows.length > 0)
       return res
         .status(409)
-        .json({ success: false, error: "Voter already exists" });
+        .json({ success: false, message: "Voter already exists" });
 
     const hashedPassword = await bcrypt.hash(
       password,
       parseInt(process.env.HASH_SALT) || 10
     );
 
-    const newUser = await pool.query(
-      `INSERT INTO voter("firstname", "lastname", "email", "idnumber", "dateofbirth", "phonenumber", "password") 
-      VALUES ($1, $2, $3, $4, $5, $6, $7) 
-      RETURNING "voterid", "firstname", "lastname", "email", "idnumber", "dateofbirth", "phonenumber"`,
-      [
-        firstName,
-        lastName,
-        email,
-        idNumber,
-        dataOfBirth,
-        phoneNumber,
-        hashedPassword,
-      ]
-    );
+    const { userRow, profileImageUrl } = await withTransaction(
+      async (client) => {
+        const newUser = await client.query(
+          `INSERT INTO voter("firstname", "lastname", "email", "idnumber", "dateofbirth", "phonenumber", "password") 
+          VALUES ($1, $2, $3, $4, $5, $6, $7) 
+          RETURNING "voterid", "firstname", "lastname", "email", "idnumber", "dateofbirth", "phonenumber"`,
+          [
+            firstName,
+            lastName,
+            email,
+            idNumber,
+            dataOfBirth,
+            phoneNumber,
+            hashedPassword,
+          ]
+        );
 
-    const voterId = newUser.rows[0].voterid;
+        const voterId = newUser.rows[0].voterid;
+        let profileUrl = null;
+
+        if (req.file) {
+          uploadedPath = await uploadFile("avatars", req.file);
+          profileUrl = getPublicUrl(uploadedPath);
+
+          await client.query(
+            `UPDATE voter SET "profileimageurl" = $1 WHERE "voterid" = $2`,
+            [profileUrl, voterId]
+          );
+        }
+
+        return { userRow: newUser.rows[0], profileImageUrl: profileUrl };
+      }
+    );
 
     try {
       const verificationToken = await generateEmailVerificationToken(
@@ -72,17 +97,30 @@ export const registerUser = async (req, res) => {
       console.error("Failed to send verification email:", emailError);
     }
 
+    const userData = {
+      ...userRow,
+      profileimageurl: profileImageUrl,
+    };
+
     return res.status(201).json({
       success: true,
       message:
         "Voter created successfully. Please check your email to verify your account.",
-      data: newUser.rows[0],
+      data: mapVoterRow(userData),
     });
   } catch (err) {
+    if (uploadedPath) {
+      try {
+        await deleteFile(uploadedPath);
+      } catch (cleanupError) {
+        console.error("Registration cleanup error:", cleanupError);
+      }
+    }
+
     console.error("Registration error:", err);
     return res
       .status(500)
-      .json({ success: false, error: "Registration failed" });
+      .json({ success: false, message: "Registration failed" });
   }
 };
 
@@ -95,19 +133,21 @@ export const getVoterById = async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, error: "Voter not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Voter not found" });
     }
 
     return res.status(200).json({
       success: true,
       message: "Voter fetched successfully",
-      data: result.rows[0],
+      data: mapVoterRow(result.rows[0]),
     });
   } catch (error) {
     console.error("Profile fetch error: ", error);
     return res
       .status(500)
-      .json({ success: false, error: "Internal server error" });
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -121,13 +161,13 @@ export const getAllVoters = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Voters fetched successfully",
-      data: voters.rows,
+      data: voters.rows.map(mapVoterRow),
     });
   } catch (error) {
     console.error("Voters fetch error:", error);
     return res
       .status(500)
-      .json({ success: false, error: "Internal server error" });
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -142,9 +182,9 @@ export const updateVoter = async (req, res) => {
       newPassword,
     } = req.body;
 
-    const voterId = req.user?.voterId || req.voter?.id;
+    const voterId = req.user?.id;
     if (!voterId) {
-      return res.status(401).json({ success: false, error: "Unauthorized" });
+      return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
     const voter = await pool.query(
@@ -153,7 +193,9 @@ export const updateVoter = async (req, res) => {
     );
 
     if (voter.rows.length === 0) {
-      return res.status(404).json({ success: false, error: "Voter not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Voter not found" });
     }
 
     if (newPassword && currentPassword) {
@@ -165,7 +207,7 @@ export const updateVoter = async (req, res) => {
       if (!isMatch) {
         return res
           .status(401)
-          .json({ success: false, error: "Current password is incorrect" });
+          .json({ success: false, message: "Current password is incorrect" });
       }
 
       const hashedPassword = await bcrypt.hash(
@@ -210,7 +252,7 @@ export const updateVoter = async (req, res) => {
     console.error("Profile update error:", error);
     return res
       .status(500)
-      .json({ success: false, error: "Internal server error" });
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -218,9 +260,9 @@ export const deleteAccount = async (req, res) => {
   try {
     const { password } = req.body;
 
-    const voterId = req.user?.voterId || req.voter?.id;
+    const voterId = req.user?.id;
     if (!voterId) {
-      return res.status(401).json({ success: false, error: "Unauthorized" });
+      return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
     const voterPassword = await pool.query(
@@ -229,7 +271,9 @@ export const deleteAccount = async (req, res) => {
     );
 
     if (voterPassword.rows.length === 0) {
-      return res.status(404).json({ success: false, error: "Voter not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Voter not found" });
     }
 
     const comparedPasswords = await bcrypt.compare(
@@ -240,7 +284,7 @@ export const deleteAccount = async (req, res) => {
     if (!comparedPasswords) {
       return res
         .status(401)
-        .json({ success: false, error: "Password is incorrect" });
+        .json({ success: false, message: "Password is incorrect" });
     }
 
     await pool.query(`DELETE FROM "Vote" WHERE "VoterID" = $1`, [voterId]);
@@ -255,7 +299,7 @@ export const deleteAccount = async (req, res) => {
     console.error("Account deletion error:", error);
     return res
       .status(500)
-      .json({ success: false, error: "Internal server error" });
+      .json({ success: false, message: "Internal server error" });
   }
 };
 

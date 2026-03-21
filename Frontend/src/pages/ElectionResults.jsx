@@ -24,7 +24,7 @@ const ElectionResults = () => {
     const fetchResults = async () => {
       try {
         const response = await axios.get(`/votes/results/${electionId}`);
-        setResults(response.data.results || []);
+        setResults(response.data.data || []);
       } catch (err) {
         setError("No results found or election not started.");
       } finally {
@@ -37,7 +37,7 @@ const ElectionResults = () => {
   if (loading) return <CircularProgress />;
 
   // Calculate total from the view data
-  const totalVotes = results.reduce((sum, r) => sum + parseInt(r.votecount), 0);
+  const totalVotes = results.reduce((sum, r) => sum + Number(r.voteCount), 0);
 
   return (
     <Container maxWidth="lg">
@@ -60,7 +60,7 @@ const ElectionResults = () => {
             <Grid item xs={12} key={index}>
               <Card>
                 <CardContent>
-                  <Typography variant="h6">{result.candidatename}</Typography>
+                  <Typography variant="h6">{result.candidateName}</Typography>
                   <Typography variant="body2" color="text.secondary">
                     {result.position}
                   </Typography>
@@ -69,19 +69,17 @@ const ElectionResults = () => {
                     <Box sx={{ width: "100%", mr: 1 }}>
                       <LinearProgress
                         variant="determinate"
-                        value={parseFloat(result.votepercentage)}
+                        value={Number(result.votePercentage)}
                         sx={{ height: 10, borderRadius: 5 }}
                       />
                     </Box>
                     <Box sx={{ minWidth: 35 }}>
                       <Typography variant="body2" color="text.secondary">
-                        {result.votepercentage}%
+                        {result.votePercentage}%
                       </Typography>
                     </Box>
                   </Box>
-                  <Typography variant="caption">
-                    {result.votecount} votes
-                  </Typography>
+                  <Typography variant="caption">{result.voteCount} votes</Typography>
                 </CardContent>
               </Card>
             </Grid>

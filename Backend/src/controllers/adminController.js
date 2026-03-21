@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import { mapVoterRow } from "../utils/mappers.js";
 
 export const getDashboardStats = async (req, res) => {
   try {
@@ -32,11 +33,38 @@ export const getDashboardStats = async (req, res) => {
       data: {
         voterOverview: voterStats.rows[0],
         activeElections: activeElections.rows[0],
-        totalCandidates: parseInt(totalCandidates.rows.count),
+        totalCandidates: Number(totalCandidates.rows[0]?.count ?? 0),
       },
     });
   } catch (error) {
     console.error("Error fetching dashboard stats: ", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const getUsers = async (req, res) => {
+  try {
+    const votersResult = await pool.query(
+      `SELECT "voterid", "firstname", "lastname", "email", "isverified", "hasvoted", "createdat"
+       FROM voter
+       ORDER BY "createdat" DESC`
+    );
+
+    const users = votersResult.rows.map((row) => ({
+      ...mapVoterRow(row),
+      id: row.voterid,
+      role: "voter",
+    }));
+
+    return res.status(200).json({
+      success: true,
+      message: "Users fetched successfully",
+      data: users,
+    });
+  } catch (error) {
+    console.error("Error fetching users:", error);
     return res
       .status(500)
       .json({ success: false, message: "Internal server error" });

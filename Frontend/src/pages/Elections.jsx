@@ -24,7 +24,7 @@ const Elections = () => {
   const [error, setError] = useState("");
   const [createDialog, setCreateDialog] = useState(false);
   const [formData, setFormData] = useState({
-    title: "",
+    electionName: "",
     description: "",
     startDate: "",
     endDate: "",
@@ -37,10 +37,18 @@ const Elections = () => {
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("/api/elections", formData);
+      await axios.post("/elections", {
+        ElectionName: formData.electionName,
+        Description: formData.description,
+        StartDate: formData.startDate,
+        EndDate: formData.endDate,
+        IsActive: true,
+        ElectionTypeID: 1,
+        AdminID: user.id,
+      });
       setCreateDialog(false);
       setFormData({
-        title: "",
+        electionName: "",
         description: "",
         startDate: "",
         endDate: "",
@@ -96,10 +104,10 @@ const Elections = () => {
               <TextField
                 fullWidth
                 label="Title"
-                name="title"
-                value={formData.title}
+                name="electionName"
+                value={formData.electionName}
                 onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
+                  setFormData({ ...formData, electionName: e.target.value })
                 }
                 margin="normal"
                 required

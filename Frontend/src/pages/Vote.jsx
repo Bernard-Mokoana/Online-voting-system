@@ -33,19 +33,11 @@ const Vote = () => {
       try {
         const [elecRes, candRes] = await Promise.all([
           axios.get(`/elections/${electionId}`),
-          axios.get("/candidates"), // Fetch all and filter
+          axios.get(`/candidates?electionId=${electionId}`),
         ]);
 
         setElection(elecRes.data.data || elecRes.data);
-
-        // Filter candidates for this election
-        const allCandidates = candRes.data.data || candRes.data;
-        const relevantCandidates = allCandidates.filter(
-          (c) =>
-            c.electionid === parseInt(electionId) ||
-            c.ElectionID === parseInt(electionId)
-        );
-        setCandidates(relevantCandidates);
+        setCandidates(candRes.data.data || []);
       } catch (err) {
         setError("Failed to fetch data");
         console.error(err);
@@ -60,15 +52,14 @@ const Vote = () => {
     if (!selectedCandidate) return;
 
     try {
-      // Backend expects PascalCase keys for IDs
       await axios.post("/votes", {
-        ElectionId: electionId,
-        CandidateId: selectedCandidate,
+        electionId: Number(electionId),
+        candidateId: Number(selectedCandidate),
       });
       setSuccess("Vote cast successfully");
       setTimeout(() => navigate("/voter-dashboard"), 2000);
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to cast vote");
+      setError(err.response?.data?.message || "Failed to cast vote");
     }
   };
 
@@ -116,7 +107,7 @@ const Vote = () => {
                     label={
                       <Box>
                         <Typography variant="h6">
-                          {candidate.firstname} {candidate.lastname}
+                          {candidate.firstName} {candidate.lastName}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                           {candidate.position}

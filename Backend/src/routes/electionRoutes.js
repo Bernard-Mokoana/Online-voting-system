@@ -13,10 +13,10 @@ const electionRouter = express.Router();
 
 electionRouter.post("/", createElection);
 electionRouter.get("/", getAllElections);
+electionRouter.get("/active", getActiveElections);
+electionRouter.get("/:id/results", getElectionResults);
 electionRouter.get("/:id", getElectionById);
 electionRouter.put("/:id", updateElection);
 electionRouter.delete("/:id", deleteElection);
-electionRouter.get("/", getActiveElections);
-electionRouter.get("/", getElectionResults);
 
 export default electionRouter;
