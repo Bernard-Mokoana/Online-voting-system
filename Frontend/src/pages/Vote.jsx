@@ -6,7 +6,6 @@ import {
   Button,
   Box,
   Alert,
-  CircularProgress,
   Radio,
   RadioGroup,
   FormControlLabel,
@@ -14,9 +13,14 @@ import {
   FormLabel,
   Card,
   CardContent,
+  Divider,
+  Chip,
 } from "@mui/material";
+import HowToVoteIcon from "@mui/icons-material/HowToVote";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "../api/axios";
+import Navigation from "../components/Navigation";
 
 const Vote = () => {
   const { electionId } = useParams();
@@ -29,110 +33,148 @@ const Vote = () => {
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [elecRes, candRes] = await Promise.all([
-          axios.get(`/elections/${electionId}`),
-          axios.get(`/candidates?electionId=${electionId}`),
-        ]);
-
+    Promise.all([
+      axios.get(`/elections/${electionId}`),
+      axios.get(`/candidates?electionId=${electionId}`),
+    ])
+      .then(([elecRes, candRes]) => {
         setElection(elecRes.data.data || elecRes.data);
         setCandidates(candRes.data.data || []);
-      } catch (err) {
-        setError("Failed to fetch data");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+      })
+      .catch(() => setError("Failed to load election data."))
+      .finally(() => setLoading(false));
   }, [electionId]);
 
   const handleVote = async () => {
     if (!selectedCandidate) return;
-
+    setError("");
     try {
       await axios.post("/votes", {
         electionId: Number(electionId),
         candidateId: Number(selectedCandidate),
       });
-      setSuccess("Vote cast successfully");
-      setTimeout(() => navigate("/voter-dashboard"), 2000);
+      setSuccess("Your vote has been recorded successfully.");
+      setTimeout(() => navigate("/voter-dashboard"), 2500);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to cast vote");
+      setError(err.response?.data?.message || "Failed to cast your vote. Please try again.");
     }
   };
 
-  if (loading) return <CircularProgress />;
-
   return (
-    <Container maxWidth="md">
-      <Paper elevation={3} sx={{ p: 4, mt: 4 }}>
-        {election && (
-          <>
-            <Typography variant="h4" gutterBottom>
-              {election.electionname}
+    <>
+      <Navigation />
+      <Box sx={{ background: "#f0f2f5", minHeight: "calc(100vh - 52px)" }}>
+        <Box sx={{ background: "#1a3a6b", px: { xs: 2, sm: 4 }, py: 2.5 }}>
+          <Typography variant="h5" sx={{ color: "#fff", fontWeight: 700 }}>
+            Cast Your Vote
+          </Typography>
+          {election && (
+            <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.75)", mt: 0.5 }}>
+              {election.electionname || election.electionName}
             </Typography>
-            <Typography paragraph>{election.description}</Typography>
-          </>
-        )}
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-        {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            {success}
-          </Alert>
-        )}
-
-        <FormControl component="fieldset" sx={{ width: "100%", mt: 3 }}>
-          <FormLabel component="legend">Select a Candidate</FormLabel>
-          <RadioGroup
-            value={selectedCandidate}
-            onChange={(e) => setSelectedCandidate(e.target.value)}
-          >
-            {candidates.map((candidate) => (
-              <Card
-                key={candidate.candidateid}
-                sx={{ mb: 2, mt: 2 }}
-                variant="outlined"
-              >
-                <CardContent>
-                  <FormControlLabel
-                    value={candidate.candidateid}
-                    control={<Radio />}
-                    label={
-                      <Box>
-                        <Typography variant="h6">
-                          {candidate.firstName} {candidate.lastName}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {candidate.position}
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                </CardContent>
-              </Card>
-            ))}
-          </RadioGroup>
-        </FormControl>
-
-        <Box sx={{ mt: 3, display: "flex", justifyContent: "space-between" }}>
-          <Button onClick={() => navigate("/voter-dashboard")}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={handleVote}
-            disabled={!selectedCandidate || !!success}
-          >
-            Cast Vote
-          </Button>
+          )}
         </Box>
-      </Paper>
-    </Container>
+
+        <Container maxWidth="md" sx={{ py: 3 }}>
+          {loading ? (
+            <Typography variant="body2" sx={{ color: "#888" }}>Loading candidates…</Typography>
+          ) : (
+            <>
+              {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+              {success && (
+                <Alert severity="success" sx={{ mb: 2 }}>
+                  {success} Redirecting to dashboard…
+                </Alert>
+              )}
+
+              {election && (
+                <Paper variant="outlined" sx={{ p: 2.5, mb: 3, borderLeft: "3px solid #1a3a6b" }}>
+                  <Typography variant="body2" sx={{ color: "#555" }}>
+                    {election.description}
+                  </Typography>
+                  <Box sx={{ display: "flex", gap: 2, mt: 1.5 }}>
+                    <Typography variant="caption" sx={{ color: "#999" }}>
+                      From: {new Date(election.startDate).toLocaleString()}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: "#999" }}>
+                      To: {new Date(election.endDate).toLocaleString()}
+                    </Typography>
+                  </Box>
+                </Paper>
+              )}
+
+              <FormControl component="fieldset" sx={{ width: "100%" }}>
+                <FormLabel component="legend" sx={{ fontWeight: 700, color: "#1a1a1a", mb: 1.5, fontSize: "1rem" }}>
+                  Select a Candidate
+                </FormLabel>
+                <RadioGroup
+                  value={selectedCandidate}
+                  onChange={(e) => setSelectedCandidate(e.target.value)}
+                >
+                  {candidates.map((candidate) => (
+                    <Card
+                      key={candidate.candidateid}
+                      variant="outlined"
+                      onClick={() => !success && setSelectedCandidate(String(candidate.candidateid))}
+                      sx={{
+                        mb: 1.5,
+                        cursor: success ? "default" : "pointer",
+                        borderLeft: selectedCandidate === String(candidate.candidateid)
+                          ? "3px solid #2e7d32"
+                          : "3px solid transparent",
+                        background: selectedCandidate === String(candidate.candidateid)
+                          ? "#f1f8e9"
+                          : "#fff",
+                        "&:hover": { background: success ? undefined : "#f5f5f5" },
+                      }}
+                    >
+                      <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
+                        <FormControlLabel
+                          value={String(candidate.candidateid)}
+                          control={<Radio size="small" sx={{ color: "#2e7d32", "&.Mui-checked": { color: "#2e7d32" } }} />}
+                          label={
+                            <Box>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                {candidate.firstName} {candidate.lastName}
+                              </Typography>
+                              <Typography variant="body2" sx={{ color: "#777", fontSize: "0.8rem" }}>
+                                {candidate.position}
+                              </Typography>
+                            </Box>
+                          }
+                          sx={{ m: 0, width: "100%" }}
+                        />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </RadioGroup>
+              </FormControl>
+
+              <Divider sx={{ my: 3 }} />
+
+              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                <Button
+                  startIcon={<ArrowBackIcon />}
+                  onClick={() => navigate("/voter-dashboard")}
+                  sx={{ color: "#555" }}
+                >
+                  Back
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<HowToVoteIcon />}
+                  onClick={handleVote}
+                  disabled={!selectedCandidate || !!success}
+                  sx={{ background: "#2e7d32", "&:hover": { background: "#1b5e20" }, px: 3 }}
+                >
+                  Cast Vote
+                </Button>
+              </Box>
+            </>
+          )}
+        </Container>
+      </Box>
+    </>
   );
 };
 

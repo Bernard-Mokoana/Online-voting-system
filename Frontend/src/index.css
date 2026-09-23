@@ -5,14 +5,47 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif;
+  font-family: "Segoe UI", Arial, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #1a1a1a;
+  background-color: #f0f2f5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
-    monospace;
+  font-family: "Courier New", Courier, monospace;
+}
+
+/* Snappy interactions */
+button, a, [role="button"] {
+  cursor: pointer;
+}
+
+/* Page wrapper */
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Thin flat scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: #e4e4e4;
+}
+::-webkit-scrollbar-thumb {
+  background: #aaa;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
+
+/* Table zebra stripes */
+.striped tbody tr:nth-of-type(even) {
+  background-color: #f7f7f7;
 }

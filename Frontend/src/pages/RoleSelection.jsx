@@ -1,167 +1,140 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  Container,
-  Paper,
+  Box,
   Typography,
   Button,
-  Box,
-  Grid,
-  Card,
-  CardContent,
-  CardActions,
+  Paper,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import HowToVoteIcon from "@mui/icons-material/HowToVote";
 import PersonIcon from "@mui/icons-material/Person";
+import HowToVoteOutlinedIcon from "@mui/icons-material/HowToVoteOutlined";
+
+const roles = [
+  {
+    label: "Administrator",
+    description: "Manage elections, candidates, and system settings.",
+    icon: <AdminPanelSettingsIcon sx={{ fontSize: 40, color: "#1a3a6b" }} />,
+    loginPath: "/admin-login",
+    registerPath: null,
+    borderColor: "#1a3a6b",
+  },
+  {
+    label: "Voter",
+    description: "Cast your ballot in active elections and view results.",
+    icon: <HowToVoteIcon sx={{ fontSize: 40, color: "#2e7d32" }} />,
+    loginPath: "/login",
+    registerPath: "/register",
+    borderColor: "#2e7d32",
+  },
+  {
+    label: "Candidate",
+    description: "View elections you are participating in and track results.",
+    icon: <PersonIcon sx={{ fontSize: 40, color: "#b71c1c" }} />,
+    loginPath: "/candidate-login",
+    registerPath: "/candidate-register",
+    borderColor: "#b71c1c",
+  },
+];
 
 const RoleSelection = () => {
   const navigate = useNavigate();
 
-  const handleNavigate = (path) => {
-    navigate(path);
-  };
-
   return (
-    <Container maxWidth="md">
-      <Paper elevation={3} sx={{ p: 4, mt: 8, textAlign: "center" }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Welcome to Online Voting System
+    <Box
+      sx={{
+        minHeight: "100vh",
+        background: "#f0f2f5",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        px: 2,
+        py: 6,
+      }}
+    >
+      {/* Header */}
+      <Box sx={{ textAlign: "center", mb: 5 }}>
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", mb: 2, gap: 1.5 }}>
+          <HowToVoteOutlinedIcon sx={{ fontSize: 38, color: "#1a3a6b" }} />
+          <Typography variant="h4" sx={{ color: "#1a3a6b", fontWeight: 700 }}>
+            Online Voting System
+          </Typography>
+        </Box>
+        <Typography variant="body1" sx={{ color: "#555", maxWidth: 420, mx: "auto" }}>
+          A secure, transparent platform for democratic elections.
+          Select your role below to continue.
         </Typography>
-        <Typography color="text.secondary" paragraph>
-          Please select your role to continue
-        </Typography>
+      </Box>
 
-        <Grid container spacing={4} justifyContent="center" sx={{ mt: 4 }}>
-          <Grid item xs={12} md={4}>
-            <Card
-              sx={{
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                transition: "transform 0.2s",
-                "&:hover": {
-                  transform: "scale(1.02)",
-                },
-              }}
-            >
-              <CardContent sx={{ flexGrow: 1, textAlign: "center" }}>
-                <AdminPanelSettingsIcon
-                  sx={{ fontSize: 60, color: "primary.main", mb: 2 }}
-                />
-                <Typography variant="h5" component="h2" gutterBottom>
-                  Admin
-                </Typography>
-                <Typography color="text.secondary">
-                  Manage elections, users, and system settings.
-                </Typography>
-              </CardContent>
-              <CardActions sx={{ justifyContent: "center", pb: 2 }}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  size="large"
-                  onClick={() => handleNavigate("/admin-login")}
-                >
-                  Login
-                </Button>
-              </CardActions>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} md={4}>
-            <Card
-              sx={{
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                transition: "transform 0.2s",
-                "&:hover": {
-                  transform: "scale(1.02)",
-                },
-              }}
-            >
-              <CardContent sx={{ flexGrow: 1, textAlign: "center" }}>
-                <HowToVoteIcon
-                  sx={{ fontSize: 60, color: "secondary.main", mb: 2 }}
-                />
-                <Typography variant="h5" component="h2" gutterBottom>
-                  Voter
-                </Typography>
-                <Typography color="text.secondary">
-                  Cast your vote in active elections and view results.
-                </Typography>
-              </CardContent>
-              <CardActions sx={{ justifyContent: "center", pb: 2 }}>
+      {/* Role cards */}
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", md: "row" },
+          gap: 3,
+          width: "100%",
+          maxWidth: 860,
+        }}
+      >
+        {roles.map((role) => (
+          <Paper
+            key={role.label}
+            variant="outlined"
+            sx={{
+              flex: 1,
+              p: 3,
+              borderTop: `4px solid ${role.borderColor}`,
+              borderRadius: 2,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+              background: "#fff",
+              "&:hover": {
+                boxShadow: "0 2px 12px rgba(0,0,0,0.12)",
+              },
+            }}
+          >
+            <Box sx={{ mb: 1.5 }}>{role.icon}</Box>
+            <Typography variant="h6" sx={{ mb: 0.5, fontWeight: 700 }}>
+              {role.label}
+            </Typography>
+            <Typography variant="body2" sx={{ color: "#666", mb: 3, flexGrow: 1 }}>
+              {role.description}
+            </Typography>
+            <Box sx={{ display: "flex", gap: 1, width: "100%" }}>
+              <Button
+                variant="contained"
+                size="small"
+                sx={{
+                  background: role.borderColor,
+                  "&:hover": { background: role.borderColor, filter: "brightness(1.1)" },
+                  flex: 1,
+                }}
+                onClick={() => navigate(role.loginPath)}
+              >
+                Sign In
+              </Button>
+              {role.registerPath && (
                 <Button
                   variant="outlined"
-                  color="secondary"
-                  size="large"
-                  onClick={() => handleNavigate("/login")}
-                  sx={{ mr: 1 }}
-                >
-                  Login
-                </Button>
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  size="large"
-                  onClick={() => handleNavigate("/register")}
+                  size="small"
+                  sx={{ borderColor: role.borderColor, color: role.borderColor, flex: 1 }}
+                  onClick={() => navigate(role.registerPath)}
                 >
                   Register
                 </Button>
-              </CardActions>
-            </Card>
-          </Grid>
+              )}
+            </Box>
+          </Paper>
+        ))}
+      </Box>
 
-          <Grid item xs={12} md={4}>
-            <Card
-              sx={{
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                transition: "transform 0.2s",
-                "&:hover": {
-                  transform: "scale(1.02)",
-                },
-              }}
-            >
-              <CardContent sx={{ flexGrow: 1, textAlign: "center" }}>
-                <PersonIcon
-                  sx={{ fontSize: 60, color: "success.main", mb: 2 }}
-                />
-                <Typography variant="h5" component="h2" gutterBottom>
-                  Candidate
-                </Typography>
-                <Typography color="text.secondary">
-                  Manage your profile, view election information, and track
-                  your campaign.
-                </Typography>
-              </CardContent>
-              <CardActions sx={{ justifyContent: "center", pb: 2 }}>
-                <Button
-                  variant="outlined"
-                  color="success"
-                  size="large"
-                  onClick={() => handleNavigate("/candidate-login")}
-                  sx={{ mr: 1 }}
-                >
-                  Login
-                </Button>
-                <Button
-                  variant="contained"
-                  color="success"
-                  size="large"
-                  onClick={() => handleNavigate("/candidate-register")}
-                >
-                  Register
-                </Button>
-              </CardActions>
-            </Card>
-          </Grid>
-        </Grid>
-      </Paper>
-    </Container>
+      <Typography variant="caption" sx={{ color: "#aaa", mt: 5 }}>
+        © {new Date().getFullYear()} Online Voting System — All rights reserved
+      </Typography>
+    </Box>
   );
 };
 

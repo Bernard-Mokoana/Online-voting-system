@@ -6,15 +6,20 @@ import {
   Button,
   Box,
   Alert,
-  CircularProgress,
   Grid,
   Card,
   CardContent,
-  CardMedia,
   Divider,
+  Chip,
+  Avatar,
 } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import HowToVoteIcon from "@mui/icons-material/HowToVote";
+import BarChartIcon from "@mui/icons-material/BarChart";
+import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "../api/axios";
+import Navigation from "../components/Navigation";
 
 const ElectionDetails = () => {
   const { electionId } = useParams();
@@ -25,123 +30,141 @@ const ElectionDetails = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchElectionDetails = async () => {
-      try {
-        const [electionResponse, candidatesResponse] = await Promise.all([
-          axios.get(`/elections/${electionId}`),
-          axios.get(`/candidates?electionId=${electionId}`),
-        ]);
-        setElection(electionResponse.data.data || null);
-        setCandidates(candidatesResponse.data.data || []);
-      } catch (err) {
-        setError("Failed to fetch election details");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchElectionDetails();
+    Promise.all([
+      axios.get(`/elections/${electionId}`),
+      axios.get(`/candidates?electionId=${electionId}`),
+    ])
+      .then(([electionRes, candidatesRes]) => {
+        setElection(electionRes.data.data || null);
+        setCandidates(candidatesRes.data.data || []);
+      })
+      .catch(() => setError("Failed to load election details."))
+      .finally(() => setLoading(false));
   }, [electionId]);
 
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" p={3}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+  if (loading) return (
+    <>
+      <Navigation />
+      <Box sx={{ px: 4, py: 3 }}><Typography variant="body2" sx={{ color: "#888" }}>Loading…</Typography></Box>
+    </>
+  );
 
-  if (!election) {
-    return (
-      <Container maxWidth="md">
-        <Alert severity="error" sx={{ mt: 4 }}>
-          Election not found
-        </Alert>
+  if (!election) return (
+    <>
+      <Navigation />
+      <Container maxWidth="md" sx={{ py: 4 }}>
+        <Alert severity="error">Election not found.</Alert>
       </Container>
-    );
-  }
+    </>
+  );
 
-  const isActive =
-    new Date(election.startDate) <= new Date() &&
-    new Date(election.endDate) >= new Date();
+  const isActive = new Date(election.startDate) <= new Date() && new Date(election.endDate) >= new Date();
 
   return (
-    <Container maxWidth="lg">
-      <Paper elevation={3} sx={{ p: 4, mt: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          {election.electionName}
-        </Typography>
-        <Typography color="text.secondary" paragraph>
-          {election.description}
-        </Typography>
-
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle1" gutterBottom>
-            Election Period
+    <>
+      <Navigation />
+      <Box sx={{ background: "#f0f2f5", minHeight: "calc(100vh - 52px)" }}>
+        <Box sx={{ background: "#1a3a6b", px: { xs: 2, sm: 4 }, py: 2.5 }}>
+          <Typography variant="h5" sx={{ color: "#fff", fontWeight: 700 }}>
+            {election.electionName}
           </Typography>
-          <Typography>
-            Start: {new Date(election.startDate).toLocaleString()}
-          </Typography>
-          <Typography>
-            End: {new Date(election.endDate).toLocaleString()}
-          </Typography>
-          <Typography
-            color={isActive ? "success.main" : "error.main"}
-            sx={{ mt: 1 }}
-          >
-            Status: {isActive ? "Active" : "Inactive"}
-          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mt: 1 }}>
+            <Chip
+              label={isActive ? "Active" : "Closed"}
+              size="small"
+              sx={{
+                background: isActive ? "#e8f5e9" : "#f5f5f5",
+                color: isActive ? "#2e7d32" : "#777",
+                fontWeight: 600,
+                fontSize: "0.7rem",
+                height: 20,
+              }}
+            />
+            <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.65)" }}>
+              {new Date(election.startDate).toLocaleDateString()} – {new Date(election.endDate).toLocaleDateString()}
+            </Typography>
+          </Box>
         </Box>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
+        <Container maxWidth="lg" sx={{ py: 3 }}>
+          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-        <Divider sx={{ my: 3 }} />
+          <Paper variant="outlined" sx={{ p: 2.5, mb: 3, borderLeft: "3px solid #1a3a6b" }}>
+            <Typography variant="body1" sx={{ color: "#444" }}>{election.description}</Typography>
+          </Paper>
 
-        <Typography variant="h5" gutterBottom>
-          Candidates
-        </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+            <PersonOutlineIcon sx={{ fontSize: 18, color: "#1a3a6b" }} />
+            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+              Candidates ({candidates.length})
+            </Typography>
+          </Box>
 
-        <Grid container spacing={3}>
-          {candidates.map((candidate) => (
-            <Grid item xs={12} sm={6} md={4} key={candidate.candidateId}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    {`${candidate.firstName} ${candidate.lastName}`}
-                  </Typography>
-                  <Typography color="text.secondary" paragraph>
-                    {candidate.biography}
-                  </Typography>
-                </CardContent>
-              </Card>
+          {candidates.length === 0 ? (
+            <Alert severity="info">No candidates registered for this election yet.</Alert>
+          ) : (
+            <Grid container spacing={2}>
+              {candidates.map((candidate) => (
+                <Grid item xs={12} sm={6} md={4} key={candidate.candidateId}>
+                  <Card variant="outlined" sx={{ display: "flex", gap: 2, p: 2, alignItems: "flex-start" }}>
+                    <Avatar
+                      src={candidate.profileImage}
+                      sx={{ width: 48, height: 48, border: "1px solid #e0e0e0", flexShrink: 0 }}
+                    >
+                      {candidate.firstName?.[0]}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                        {candidate.firstName} {candidate.lastName}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: "#777", fontSize: "0.8rem", mb: 0.5 }}>
+                        {candidate.position}
+                      </Typography>
+                      {candidate.biography && (
+                        <Typography variant="caption" sx={{ color: "#999", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                          {candidate.biography}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Card>
+                </Grid>
+              ))}
             </Grid>
-          ))}
-        </Grid>
-
-        <Box sx={{ mt: 3, display: "flex", justifyContent: "space-between" }}>
-          <Button
-            variant="outlined"
-            color="primary"
-            onClick={() => navigate("/")}
-          >
-            Back to Dashboard
-          </Button>
-          {isActive && (
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => navigate(`/elections/${electionId}/vote`)}
-            >
-              Vote Now
-            </Button>
           )}
-        </Box>
-      </Paper>
-    </Container>
+
+          <Divider sx={{ my: 3 }} />
+
+          <Box sx={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 1.5 }}>
+            <Button
+              startIcon={<ArrowBackIcon />}
+              onClick={() => navigate("/")}
+              sx={{ color: "#555" }}
+            >
+              Back to Dashboard
+            </Button>
+            <Box sx={{ display: "flex", gap: 1.5 }}>
+              <Button
+                variant="outlined"
+                startIcon={<BarChartIcon />}
+                onClick={() => navigate(`/elections/${electionId}/results`)}
+              >
+                View Results
+              </Button>
+              {isActive && (
+                <Button
+                  variant="contained"
+                  startIcon={<HowToVoteIcon />}
+                  onClick={() => navigate(`/elections/${electionId}/vote`)}
+                  sx={{ background: "#2e7d32", "&:hover": { background: "#1b5e20" } }}
+                >
+                  Vote Now
+                </Button>
+              )}
+            </Box>
+          </Box>
+        </Container>
+      </Box>
+    </>
   );
 };
 
