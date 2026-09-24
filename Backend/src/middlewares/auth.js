@@ -4,6 +4,7 @@ import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 
 dotenv.config();
+
 export const authenticateToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
   const tokenFromCookie = req.cookies?.accessToken;
@@ -32,27 +33,38 @@ export const authenticateToken = (req, res, next) => {
   }
 };
 
+// FIX #3: authorizeRole now correctly handles voter, candidate, AND admin roles.
 export const authorizeRole = (roles) => {
   return async (req, res, next) => {
     try {
       let userRole;
+
       if (req.user.role === "admin") {
         const result = await pool.query(
-          "SELECT * FROM admin WHERE adminid = $1",
+          "SELECT adminid FROM admin WHERE adminid = $1",
           [req.user.id]
         );
-        userRole = "admin";
         if (!result.rows.length)
           return res.status(404).json({ message: "Admin not found" });
-      } else {
+        userRole = "admin";
+      } else if (req.user.role === "candidate") {
         const result = await pool.query(
-          "SELECT * FROM voter WHERE voterid = $1",
+          "SELECT candidateid FROM candidate WHERE candidateid = $1",
           [req.user.id]
         );
-        userRole = "voter";
+        if (!result.rows.length)
+          return res.status(404).json({ message: "Candidate not found" });
+        userRole = "candidate";
+      } else {
+        const result = await pool.query(
+          "SELECT voterid FROM voter WHERE voterid = $1",
+          [req.user.id]
+        );
         if (!result.rows.length)
           return res.status(404).json({ message: "Voter not found" });
+        userRole = "voter";
       }
+
       if (!roles.includes(userRole)) {
         return res.status(403).json({ message: "Unauthorized access" });
       }
@@ -64,18 +76,27 @@ export const authorizeRole = (roles) => {
   };
 };
 
+// FIX #4: verifyEmail middleware now queries the correct table based on role.
 export const verifyEmail = async (req, res, next) => {
   try {
-    const result = await pool.query(
-      "SELECT is_verified FROM users WHERE id = $1",
-      [req.user.id]
-    );
+    let result;
+    if (req.user.role === "candidate") {
+      result = await pool.query(
+        "SELECT isverified FROM candidate WHERE candidateid = $1",
+        [req.user.id]
+      );
+    } else {
+      result = await pool.query(
+        "SELECT isverified FROM voter WHERE voterid = $1",
+        [req.user.id]
+      );
+    }
 
     if (result.rows.length === 0) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (!result.rows[0].is_verified) {
+    if (!result.rows[0].isverified) {
       return res
         .status(403)
         .json({ message: "Please verify your email first" });

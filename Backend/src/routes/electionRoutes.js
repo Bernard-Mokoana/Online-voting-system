@@ -8,15 +8,19 @@ import {
   deleteElection,
   updateElection,
 } from "../controllers/electionController.js";
+import { authenticateToken, authorizeRole } from "../middlewares/auth.js";
 
 const electionRouter = express.Router();
 
-electionRouter.post("/", createElection);
+// Public read routes
 electionRouter.get("/", getAllElections);
 electionRouter.get("/active", getActiveElections);
 electionRouter.get("/:id/results", getElectionResults);
 electionRouter.get("/:id", getElectionById);
-electionRouter.put("/:id", updateElection);
-electionRouter.delete("/:id", deleteElection);
+
+// FIX #19: Write routes now require admin authentication
+electionRouter.post("/", authenticateToken, authorizeRole(["admin"]), createElection);
+electionRouter.put("/:id", authenticateToken, authorizeRole(["admin"]), updateElection);
+electionRouter.delete("/:id", authenticateToken, authorizeRole(["admin"]), deleteElection);
 
 export default electionRouter;

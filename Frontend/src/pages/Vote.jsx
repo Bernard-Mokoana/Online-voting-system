@@ -113,16 +113,16 @@ const Vote = () => {
                 >
                   {candidates.map((candidate) => (
                     <Card
-                      key={candidate.candidateid}
+                      key={candidate.candidateId}   // FIX #15: was candidate.candidateid
                       variant="outlined"
-                      onClick={() => !success && setSelectedCandidate(String(candidate.candidateid))}
+                      onClick={() => !success && setSelectedCandidate(String(candidate.candidateId))}
                       sx={{
                         mb: 1.5,
                         cursor: success ? "default" : "pointer",
-                        borderLeft: selectedCandidate === String(candidate.candidateid)
+                        borderLeft: selectedCandidate === String(candidate.candidateId)
                           ? "3px solid #2e7d32"
                           : "3px solid transparent",
-                        background: selectedCandidate === String(candidate.candidateid)
+                        background: selectedCandidate === String(candidate.candidateId)
                           ? "#f1f8e9"
                           : "#fff",
                         "&:hover": { background: success ? undefined : "#f5f5f5" },
@@ -130,7 +130,7 @@ const Vote = () => {
                     >
                       <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
                         <FormControlLabel
-                          value={String(candidate.candidateid)}
+                          value={String(candidate.candidateId)}  // FIX #15: was candidate.candidateid
                           control={<Radio size="small" sx={{ color: "#2e7d32", "&.Mui-checked": { color: "#2e7d32" } }} />}
                           label={
                             <Box>

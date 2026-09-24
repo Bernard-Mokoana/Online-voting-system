@@ -15,7 +15,7 @@
     "express",
     "backend"
   ],
-  "author": "",
+  "author": "Bernard Mokoana",
   "license": "ISC",
   "dependencies": {
     "and": "^0.0.3",
@@ -44,5 +44,18 @@
   },
   "engines": {
     "node": ">=14.0.0"
+  },
+  "nodemon": {
+    "watch": [
+      "src",
+      "server.js",
+      "app.js"
+    ],
+    "ext": "js,json,ts",
+    "ignore": [
+      "node_modules",
+      ".git",
+      "logs"
+    ]
   }
 }

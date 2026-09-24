@@ -21,7 +21,7 @@ export const registerUser = async (req, res) => {
       lastName,
       email,
       idNumber,
-      dataOfBirth,
+      dateOfBirth,  // FIX #18: was "dataOfBirth" (typo)
       phoneNumber,
       password,
     } = req.body;
@@ -31,7 +31,7 @@ export const registerUser = async (req, res) => {
       !lastName ||
       !email ||
       !idNumber ||
-      !dataOfBirth ||
+      !dateOfBirth ||
       !phoneNumber ||
       !password
     )
@@ -64,7 +64,7 @@ export const registerUser = async (req, res) => {
             lastName,
             email,
             idNumber,
-            dataOfBirth,
+            dateOfBirth,
             phoneNumber,
             hashedPassword,
           ]
@@ -234,8 +234,9 @@ export const updateVoter = async (req, res) => {
     }
 
     try {
+      // FIX #7: Use lowercase table/column names — PascalCase quoted identifiers fail
       await pool.query(
-        `INSERT INTO "VoterAuditLog" ("VoterID", "ActionType", "ActionDetails")
+        `INSERT INTO voterauditlog (voterid, actiontype, actiondetails)
          VALUES ($1, $2, $3)`,
         [
           voterId,
@@ -287,11 +288,9 @@ export const deleteAccount = async (req, res) => {
         .json({ success: false, message: "Password is incorrect" });
     }
 
-    await pool.query(`DELETE FROM "Vote" WHERE "VoterID" = $1`, [voterId]);
-    await pool.query(`DELETE FROM "VoterAuditLog" WHERE "VoterID" = $1`, [
-      voterId,
-    ]);
-
+    // FIX #6: Removed explicit deletes of Vote and VoterAuditLog with wrong-case
+    // quoted identifiers ("Vote", "VoterAuditLog"). The FK constraints have
+    // ON DELETE CASCADE set, so deleting the voter row handles them automatically.
     await pool.query(`DELETE FROM voter WHERE "voterid" = $1`, [voterId]);
 
     return res.json({ success: true, message: "Account deleted successfully" });

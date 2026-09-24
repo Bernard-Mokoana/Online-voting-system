@@ -31,7 +31,7 @@ const VoterRegister = () => {
     lastName: "",
     email: "",
     idNumber: "",
-    dataOfBirth: "",
+    dateOfBirth: "",  // FIX #18: was "dataOfBirth" (typo)
     phoneNumber: "",
     password: "",
     confirmPassword: "",
@@ -65,7 +65,7 @@ const VoterRegister = () => {
         formData.lastName,
         formData.email,
         formData.idNumber,
-        formData.dataOfBirth,
+        formData.dateOfBirth,   // FIX #18: was formData.dataOfBirth
         formData.phoneNumber,
         formData.password,
         formData.profileImage
@@ -128,7 +128,7 @@ const VoterRegister = () => {
             </Grid>
             <Grid item xs={12} sm={6}>
               <Field label="Date of Birth">
-                <TextField fullWidth name="dataOfBirth" type="date" value={formData.dataOfBirth} onChange={handleChange} required InputLabelProps={{ shrink: true }} />
+                <TextField fullWidth name="dateOfBirth" type="date" value={formData.dateOfBirth} onChange={handleChange} required InputLabelProps={{ shrink: true }} />
               </Field>
             </Grid>
           </Grid>

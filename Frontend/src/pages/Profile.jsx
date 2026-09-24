@@ -14,6 +14,7 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import { useAuth } from "../hooks/useAuth";
 import Navigation from "../components/Navigation";
+import axios from "../api/axios";
 
 const Field = ({ label, children }) => (
   <Box sx={{ mb: 2 }}>
@@ -55,8 +56,26 @@ const Profile = () => {
 
     setLoading(true);
     try {
-      // TODO: Implement profile update API call
+      // FIX #13: Was a stub — now actually calls the backend API
+      const payload = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+      };
+
+      if (formData.newPassword && formData.currentPassword) {
+        payload.currentPassword = formData.currentPassword;
+        payload.newPassword = formData.newPassword;
+      }
+
+      await axios.put("/voters/profile", payload);
       setSuccess("Profile updated successfully.");
+      // Clear password fields after successful update
+      setFormData((prev) => ({
+        ...prev,
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      }));
     } catch (err) {
       setError(err.response?.data?.message || "Failed to update profile.");
     } finally {

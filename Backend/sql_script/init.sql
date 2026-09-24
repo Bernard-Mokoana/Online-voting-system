@@ -1,4 +1,4 @@
--- Active: 1739611791945@@127.0.0.1@5432@OnlineVotingSystem
+-- Active: 1779020459307@@127.0.0.1@5432@wevote@public
 DROP TABLE IF EXISTS VoterAuditLog CASCADE;
 DROP TABLE IF EXISTS AdminAuditLog CASCADE;
 DROP TABLE IF EXISTS Vote CASCADE;
@@ -9,7 +9,6 @@ DROP TABLE IF EXISTS Voter CASCADE;
 DROP TABLE IF EXISTS Address CASCADE;
 DROP TABLE IF EXISTS Admin CASCADE;
 DROP TABLE IF EXISTS refreshToken CASCADE;
-DROP TABLE IF EXISTS Address CASCADE;
 
 DROP TABLE IF EXISTS resetpasswordtoken CASCADE;
 DROP TABLE IF EXISTS emailverificationtoken CASCADE;
@@ -166,15 +165,17 @@ CREATE TABLE refreshToken (
     refreshTokenID SERIAL PRIMARY KEY,
     voterID INTEGER REFERENCES "voter"(VoterID) ON DELETE CASCADE,
     candidateID INTEGER REFERENCES "candidate"(CandidateID) ON DELETE CASCADE,
+    adminID INTEGER REFERENCES "admin"(AdminID) ON DELETE CASCADE,
     token TEXT NOT NULL,
     isActive BOOLEAN DEFAULT TRUE,
     expiresAt TIMESTAMP,
     createdAt TIMESTAMP DEFAULT NOW(),
     updatedAt TIMESTAMP DEFAULT NOW(),
-    CONSTRAINT refreshToken_one_id_required 
+    CONSTRAINT refreshToken_one_id_required
         CHECK (
-            ("voterid" IS NOT NULL AND "candidateid" IS NULL) OR 
-            ("voterid" IS NULL AND "candidateid" IS NOT NULL)
+            (voterid IS NOT NULL AND candidateid IS NULL AND adminid IS NULL) OR
+            (voterid IS NULL AND candidateid IS NOT NULL AND adminid IS NULL) OR
+            (voterid IS NULL AND candidateid IS NULL AND adminid IS NOT NULL)
         )
 );
 
@@ -541,3 +542,4 @@ BEGIN
     RAISE NOTICE 'Triggers created: 9';
     RAISE NOTICE 'Functions created: 5';
 END $$;
+

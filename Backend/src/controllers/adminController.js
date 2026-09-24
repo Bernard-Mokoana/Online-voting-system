@@ -32,7 +32,7 @@ export const getDashboardStats = async (req, res) => {
       message: "Dashboard stats fetched successfully",
       data: {
         voterOverview: voterStats.rows[0],
-        activeElections: activeElections.rows[0],
+        activeElections: activeElections.rows,  // FIX #22: was .rows[0] — now returns all active elections
         totalCandidates: Number(totalCandidates.rows[0]?.count ?? 0),
       },
     });

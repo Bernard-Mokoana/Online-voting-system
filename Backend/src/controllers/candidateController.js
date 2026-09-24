@@ -20,6 +20,7 @@ export const registerCandidate = async (req, res) => {
       electionId,
     } = req.body;
 
+    // FIX #10: electionId is now checked as a required field explicitly
     if (
       !firstName ||
       !lastName ||
@@ -27,7 +28,8 @@ export const registerCandidate = async (req, res) => {
       !idNumber ||
       !position ||
       !biography ||
-      !password
+      !password ||
+      !electionId
     )
       return res
         .status(400)

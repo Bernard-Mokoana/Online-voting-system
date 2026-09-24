@@ -12,6 +12,7 @@ import {
   generateResetPasswordToken,
   verifyResetPasswordToken,
 } from "../utils/token.utils.js";
+import { sendForgotPasswordEmail } from "../utils/email.utils.js";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 
@@ -72,7 +73,9 @@ export const loginUser = async (req, res) => {
         .status(401)
         .json({ success: false, message: "Invalid credentials" });
 
-    const isVerified = role === "voter" ? user.rows[0].IsVerified : false;
+    // FIX #9: isVerified now reads from the actual DB field for ALL roles,
+    // not hardcoded false for candidates.
+    const isVerified = user.rows[0].isverified ?? false;
 
     const accessToken = signAccessToken(user.rows[0], role);
 
@@ -129,13 +132,13 @@ export const logoutUser = async (req, res) => {
     if (token) {
       const tokenHash = hashToken(token);
       const doc = await pool.query(
-        `SELECT "refreshTokenID", token FROM "refreshToken" WHERE token = $1 AND isActive = TRUE`,
+        `SELECT refreshtokenid, token FROM refreshtoken WHERE token = $1 AND isactive = TRUE`,
         [tokenHash]
       );
       if (doc.rows.length > 0) {
         await pool.query(
-          `UPDATE "refreshToken" SET isActive = FALSE, "updatedAt" = NOW() WHERE "refreshTokenID" = $1`,
-          [doc.rows[0].refreshTokenID]
+          `UPDATE refreshtoken SET isactive = FALSE, updatedat = NOW() WHERE refreshtokenid = $1`,
+          [doc.rows[0].refreshtokenid]
         );
       }
     }
@@ -148,30 +151,102 @@ export const logoutUser = async (req, res) => {
   }
 };
 
-export const resetPassword = async (req, res) => {
+// FIX #2a: forgotPassword — new endpoint. Accepts { email }, finds the user,
+// generates a reset token, persists it, and sends the email.
+export const forgotPassword = async (req, res) => {
   try {
-    const { password, newPassword } = req.body;
+    const { email } = req.body;
 
-    if (!password || !newPassword) {
-      return res
-        .status(400)
-        .json({ message: "Password and new password are required" });
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
     }
 
-    const token = generateResetPasswordToken();
+    // Try voter first, then candidate
+    let userId = null;
+    let isVoter = true;
+
+    const voterResult = await pool.query(
+      `SELECT voterid FROM voter WHERE email = $1`,
+      [email]
+    );
+
+    if (voterResult.rows.length > 0) {
+      userId = voterResult.rows[0].voterid;
+      isVoter = true;
+    } else {
+      const candidateResult = await pool.query(
+        `SELECT candidateid FROM candidate WHERE email = $1`,
+        [email]
+      );
+      if (candidateResult.rows.length > 0) {
+        userId = candidateResult.rows[0].candidateid;
+        isVoter = false;
+      }
+    }
+
+    // Always return success to prevent email enumeration attacks
+    if (!userId) {
+      return res.status(200).json({
+        message: "If that email is registered, a reset link has been sent.",
+      });
+    }
+
+    const token = await generateResetPasswordToken(userId, isVoter);
+    await sendForgotPasswordEmail(email, token);
+
+    return res.status(200).json({
+      message: "If that email is registered, a reset link has been sent.",
+    });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// FIX #2b: resetPassword — reads the token from req.query or req.body,
+// verifies it, hashes the new password, and saves it.
+export const resetPassword = async (req, res) => {
+  try {
+    const token = req.query.token || req.body.token;
+    const { newPassword } = req.body;
 
     if (!token) {
       return res.status(400).json({ message: "Reset token is required" });
     }
 
-    const user = await verifyResetPasswordToken(token);
-    if (!user) {
+    if (!newPassword || newPassword.length < 8) {
+      return res
+        .status(400)
+        .json({ message: "New password must be at least 8 characters" });
+    }
+
+    const record = await verifyResetPasswordToken(token);
+    if (!record) {
       return res
         .status(401)
         .json({ message: "Invalid or expired reset token" });
     }
 
-    return res.status(200).json({ message: "Password changed successfully" });
+    const hashedPassword = await bcrypt.hash(
+      newPassword,
+      parseInt(process.env.HASH_SALT) || 10
+    );
+
+    if (record.voterid) {
+      await pool.query(
+        `UPDATE voter SET password = $1 WHERE voterid = $2`,
+        [hashedPassword, record.voterid]
+      );
+    } else if (record.candidateid) {
+      await pool.query(
+        `UPDATE candidate SET password = $1 WHERE candidateid = $2`,
+        [hashedPassword, record.candidateid]
+      );
+    } else {
+      return res.status(400).json({ message: "Invalid token association" });
+    }
+
+    return res.status(200).json({ message: "Password reset successfully" });
   } catch (error) {
     console.error("Reset password error:", error);
     return res.status(500).json({ message: "Internal server error" });
@@ -196,8 +271,8 @@ export const refreshToken = async (req, res) => {
 
     const tokenHash = hashToken(token);
     const doc = await pool.query(
-      `SELECT "refreshTokenid", token, "voterid", "candidateid", "adminid", "expiresat", isactive 
-       FROM "refreshtoken" 
+      `SELECT refreshtokenid, token, voterid, candidateid, adminid, expiresat, isactive
+       FROM refreshtoken
        WHERE token = $1 AND isactive = TRUE`,
       [tokenHash]
     );
@@ -220,19 +295,19 @@ export const refreshToken = async (req, res) => {
     const role = decoded.role;
     if (tokenRecord.voterid) {
       const userResult = await pool.query(
-        `SELECT * FROM voter WHERE "voterid" = $1`,
+        `SELECT * FROM voter WHERE voterid = $1`,
         [tokenRecord.voterid]
       );
       user = userResult.rows[0];
     } else if (tokenRecord.candidateid) {
       const userResult = await pool.query(
-        `SELECT * FROM candidate WHERE "candidateid" = $1`,
+        `SELECT * FROM candidate WHERE candidateid = $1`,
         [tokenRecord.candidateid]
       );
       user = userResult.rows[0];
     } else if (tokenRecord.adminid) {
       const userResult = await pool.query(
-        `SELECT * FROM admin WHERE "adminid" = $1`,
+        `SELECT * FROM admin WHERE adminid = $1`,
         [tokenRecord.adminid]
       );
       user = userResult.rows[0];

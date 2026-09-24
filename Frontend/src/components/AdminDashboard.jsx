@@ -24,9 +24,11 @@ import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import axios from "../api/axios";
 import Navigation from "./Navigation";
 import { useAuth } from "../hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 const AdminDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const mockElections = useMemo(
     () => [
       { electionId: 1, electionName: "Presidential Election 2025", description: "Vote for the next president.", startDate: "2025-05-01T08:00:00Z", endDate: "2025-05-10T18:00:00Z" },
@@ -38,9 +40,12 @@ const AdminDashboard = () => {
   const [elections, setElections] = useState([]);
   const [message, setMessage] = useState({ text: "", severity: "info" });
   const [createDialog, setCreateDialog] = useState(false);
+  const [editDialog, setEditDialog] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [selectedElection, setSelectedElection] = useState(null);
   const [formData, setFormData] = useState({ electionName: "", description: "", startDate: "", endDate: "" });
 
-  useEffect(() => {
+  const fetchElections = () =>
     axios
       .get("/elections")
       .then((res) => setElections(res.data.data || []))
@@ -48,7 +53,10 @@ const AdminDashboard = () => {
         setElections(mockElections);
         setMessage({ text: "Using demo data — could not reach server.", severity: "warning" });
       });
-  }, [mockElections]);
+
+  useEffect(() => {
+    fetchElections();
+  }, []);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -64,16 +72,114 @@ const AdminDashboard = () => {
       });
       setCreateDialog(false);
       setFormData({ electionName: "", description: "", startDate: "", endDate: "" });
-      // Refresh
-      const res = await axios.get("/elections");
-      setElections(res.data.data || []);
+      await fetchElections();
       setMessage({ text: "Election created successfully.", severity: "success" });
     } catch {
       setMessage({ text: "Failed to create election.", severity: "error" });
     }
   };
 
+  // FIX #12: Edit handler — opens edit dialog pre-populated with election data
+  const handleEditOpen = (election) => {
+    setSelectedElection(election);
+    setFormData({
+      electionName: election.electionName,
+      description: election.description,
+      startDate: election.startDate ? election.startDate.slice(0, 16) : "",
+      endDate: election.endDate ? election.endDate.slice(0, 16) : "",
+    });
+    setEditDialog(true);
+  };
+
+  const handleEdit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`/elections/${selectedElection.electionId}`, {
+        ElectionName: formData.electionName,
+        Description: formData.description,
+        StartDate: formData.startDate,
+        EndDate: formData.endDate,
+        IsActive: selectedElection.isActive,
+        ElectionTypeID: selectedElection.electionTypeId || 1,
+        AdminID: user?.id,
+      });
+      setEditDialog(false);
+      setSelectedElection(null);
+      await fetchElections();
+      setMessage({ text: "Election updated successfully.", severity: "success" });
+    } catch {
+      setMessage({ text: "Failed to update election.", severity: "error" });
+    }
+  };
+
+  // FIX #12: Delete handler — prompts confirmation then deletes
+  const handleDeleteOpen = (election) => {
+    setSelectedElection(election);
+    setDeleteDialog(true);
+  };
+
+  const handleDelete = async () => {
+    try {
+      await axios.delete(`/elections/${selectedElection.electionId}`);
+      setDeleteDialog(false);
+      setSelectedElection(null);
+      await fetchElections();
+      setMessage({ text: "Election deleted successfully.", severity: "success" });
+    } catch {
+      setMessage({ text: "Failed to delete election.", severity: "error" });
+    }
+  };
+
   const isActive = (el) => new Date(el.startDate) <= new Date() && new Date(el.endDate) >= new Date();
+
+  const ElectionFormFields = () => (
+    <>
+      <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 500 }}>Election Title</Typography>
+      <TextField
+        fullWidth
+        value={formData.electionName}
+        onChange={(e) => setFormData({ ...formData, electionName: e.target.value })}
+        required
+        placeholder="e.g. Presidential Election 2025"
+        sx={{ mb: 2 }}
+      />
+      <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 500 }}>Description</Typography>
+      <TextField
+        fullWidth
+        value={formData.description}
+        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+        required
+        multiline
+        rows={3}
+        placeholder="Describe this election…"
+        sx={{ mb: 2 }}
+      />
+      <Grid container spacing={2}>
+        <Grid item xs={6}>
+          <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 500 }}>Start Date & Time</Typography>
+          <TextField
+            fullWidth
+            type="datetime-local"
+            value={formData.startDate}
+            onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+            required
+            InputLabelProps={{ shrink: true }}
+          />
+        </Grid>
+        <Grid item xs={6}>
+          <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 500 }}>End Date & Time</Typography>
+          <TextField
+            fullWidth
+            type="datetime-local"
+            value={formData.endDate}
+            onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+            required
+            InputLabelProps={{ shrink: true }}
+          />
+        </Grid>
+      </Grid>
+    </>
+  );
 
   return (
     <>
@@ -160,14 +266,30 @@ const AdminDashboard = () => {
                       </Typography>
                     </CardContent>
                     <Divider />
+                    {/* FIX #12: All buttons now have working onClick handlers */}
                     <CardActions sx={{ px: 1.5, py: 0.75, gap: 0.5 }}>
-                      <Button size="small" startIcon={<EditIcon sx={{ fontSize: "14px !important" }} />} sx={{ fontSize: "0.75rem", color: "#555" }}>
+                      <Button
+                        size="small"
+                        startIcon={<EditIcon sx={{ fontSize: "14px !important" }} />}
+                        sx={{ fontSize: "0.75rem", color: "#555" }}
+                        onClick={() => handleEditOpen(election)}
+                      >
                         Edit
                       </Button>
-                      <Button size="small" startIcon={<DeleteIcon sx={{ fontSize: "14px !important" }} />} sx={{ fontSize: "0.75rem", color: "#b71c1c" }}>
+                      <Button
+                        size="small"
+                        startIcon={<DeleteIcon sx={{ fontSize: "14px !important" }} />}
+                        sx={{ fontSize: "0.75rem", color: "#b71c1c" }}
+                        onClick={() => handleDeleteOpen(election)}
+                      >
                         Delete
                       </Button>
-                      <Button size="small" startIcon={<VisibilityIcon sx={{ fontSize: "14px !important" }} />} sx={{ fontSize: "0.75rem", color: "#555" }}>
+                      <Button
+                        size="small"
+                        startIcon={<VisibilityIcon sx={{ fontSize: "14px !important" }} />}
+                        sx={{ fontSize: "0.75rem", color: "#555" }}
+                        onClick={() => navigate(`/elections/${election.electionId}`)}
+                      >
                         View
                       </Button>
                     </CardActions>
@@ -185,56 +307,45 @@ const AdminDashboard = () => {
         <Divider />
         <DialogContent>
           <Box component="form" id="create-form" onSubmit={handleCreate} sx={{ pt: 1 }}>
-            <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 500 }}>Election Title</Typography>
-            <TextField
-              fullWidth
-              value={formData.electionName}
-              onChange={(e) => setFormData({ ...formData, electionName: e.target.value })}
-              required
-              placeholder="e.g. Presidential Election 2025"
-              sx={{ mb: 2 }}
-            />
-            <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 500 }}>Description</Typography>
-            <TextField
-              fullWidth
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              required
-              multiline
-              rows={3}
-              placeholder="Describe this election…"
-              sx={{ mb: 2 }}
-            />
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 500 }}>Start Date & Time</Typography>
-                <TextField
-                  fullWidth
-                  type="datetime-local"
-                  value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  required
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 500 }}>End Date & Time</Typography>
-                <TextField
-                  fullWidth
-                  type="datetime-local"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  required
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-            </Grid>
+            <ElectionFormFields />
           </Box>
         </DialogContent>
         <Divider />
         <DialogActions sx={{ px: 3, py: 1.5 }}>
           <Button onClick={() => setCreateDialog(false)} sx={{ color: "#555" }}>Cancel</Button>
           <Button type="submit" form="create-form" variant="contained">Create</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Election Dialog */}
+      <Dialog open={editDialog} onClose={() => setEditDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>Edit Election</DialogTitle>
+        <Divider />
+        <DialogContent>
+          <Box component="form" id="edit-form" onSubmit={handleEdit} sx={{ pt: 1 }}>
+            <ElectionFormFields />
+          </Box>
+        </DialogContent>
+        <Divider />
+        <DialogActions sx={{ px: 3, py: 1.5 }}>
+          <Button onClick={() => setEditDialog(false)} sx={{ color: "#555" }}>Cancel</Button>
+          <Button type="submit" form="edit-form" variant="contained">Save Changes</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialog} onClose={() => setDeleteDialog(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>Delete Election</DialogTitle>
+        <Divider />
+        <DialogContent>
+          <Typography variant="body2">
+            Are you sure you want to delete <strong>{selectedElection?.electionName}</strong>? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <Divider />
+        <DialogActions sx={{ px: 3, py: 1.5 }}>
+          <Button onClick={() => setDeleteDialog(false)} sx={{ color: "#555" }}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={handleDelete}>Delete</Button>
         </DialogActions>
       </Dialog>
     </>

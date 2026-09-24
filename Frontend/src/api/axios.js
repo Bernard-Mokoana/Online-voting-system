@@ -49,7 +49,7 @@ instance.interceptors.response.use(
         })
           .then((token) => {
             originalRequest.headers["Authorization"] = "Bearer " + token;
-            return axios(originalRequest);
+            return instance(originalRequest); // FIX #14: was bare axios() — must use instance
           })
           .catch((err) => {
             return Promise.reject(err);
@@ -70,7 +70,7 @@ instance.interceptors.response.use(
 
         processQueue(null, newAccessToken);
 
-        return axios(originalRequest);
+        return instance(originalRequest); // FIX #14: was bare axios() — must use instance
       } catch (refreshError) {
         processQueue(refreshError, null);
         // Optional: Dispatch logout event or redirect

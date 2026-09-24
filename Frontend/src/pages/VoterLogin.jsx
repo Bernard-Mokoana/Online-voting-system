@@ -30,7 +30,14 @@ const VoterLogin = () => {
     setLoading(true);
     try {
       await login(formData.email, formData.password, "voter");
-      navigate("/voter-dashboard");
+      // FIX #17: navigate based on the user role set in AuthContext after login
+      // (candidates accidentally using the voter login form get routed correctly)
+      const stored = JSON.parse(localStorage.getItem("user") || "{}");
+      if (stored.role === "candidate") {
+        navigate("/candidate-dashboard");
+      } else {
+        navigate("/voter-dashboard");
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Invalid email or password.");
     } finally {

@@ -5,7 +5,7 @@ import pool from "../config/db.js";
 
 dotenv.config();
 
-const REFRESH_TTL_SEC = 60 * 60 * 24 * 7;
+const REFRESH_TTL_SEC = 60 * 60 * 24 * 7; // 7 days
 
 function hashToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -51,15 +51,15 @@ async function persistRefreshToken({ user, refreshToken, role }) {
   let values = [];
 
   if (role === "voter") {
-    query = `INSERT INTO refreshToken (voterID, token, expiresAt, createdAt, updatedAt) 
+    query = `INSERT INTO refreshtoken (voterid, token, expiresat, createdat, updatedat)
              VALUES ($1, $2, $3, NOW(), NOW())`;
     values = [user.voterid, tokenHash, expiresAt];
   } else if (role === "candidate") {
-    query = `INSERT INTO refreshToken (candidateID, token, expiresAt, createdAt, updatedAt)
+    query = `INSERT INTO refreshtoken (candidateid, token, expiresat, createdat, updatedat)
              VALUES ($1, $2, $3, NOW(), NOW())`;
     values = [user.candidateid, tokenHash, expiresAt];
   } else if (role === "admin") {
-    query = `INSERT INTO refreshToken (adminID, token, expiresAt, createdAt, updatedAt)
+    query = `INSERT INTO refreshtoken (adminid, token, expiresat, createdat, updatedat)
              VALUES ($1, $2, $3, NOW(), NOW())`;
     values = [user.adminid, tokenHash, expiresAt];
   }
@@ -84,7 +84,7 @@ function setRefreshCookie(res, refreshToken) {
 
 async function rotateRefreshToken(oldDoc, user, req, res, role) {
   await pool.query(
-    `UPDATE refreshToken SET isActive = FALSE, updatedAt = NOW() WHERE "refreshTokenID" = $1`,
+    `UPDATE refreshtoken SET isactive = FALSE, updatedat = NOW() WHERE refreshtokenid = $1`,
     [oldDoc.refreshtokenid]
   );
 
@@ -104,25 +104,66 @@ async function rotateRefreshToken(oldDoc, user, req, res, role) {
   return { accessToken: newAccess };
 }
 
-async function generateResetPasswordToken() {
+// FIX #1: generateResetPasswordToken now accepts userId + isVoter,
+// persists the token to DB, and RETURNS it.
+async function generateResetPasswordToken(userId, isVoter = true) {
   const token = crypto.randomBytes(32).toString("hex");
-}
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-async function verifyResetPasswordToken(token) {}
-
-async function generateEmailVerificationToken(userId, isVoter = true) {
-  const token = crypto.randomBytes(32).toString("hex");
-
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
   if (isVoter) {
     await pool.query(
-      `INSERT INTO emailVerificationToken (voterID, candidateID, token, expiredAt, createdAt, updatedAt)
+      `INSERT INTO resetpasswordtoken (voterid, token, expiredat, createdat, updatedat)
+       VALUES ($1, $2, $3, NOW(), NOW())`,
+      [userId, token, expiresAt]
+    );
+  } else {
+    await pool.query(
+      `INSERT INTO resetpasswordtoken (candidateid, token, expiredat, createdat, updatedat)
+       VALUES ($1, $2, $3, NOW(), NOW())`,
+      [userId, token, expiresAt]
+    );
+  }
+
+  return token; // FIX: was missing this return statement
+}
+
+// FIX #1: verifyResetPasswordToken is now fully implemented.
+async function verifyResetPasswordToken(token) {
+  const result = await pool.query(
+    `SELECT resetpasswordid, voterid, candidateid
+     FROM resetpasswordtoken
+     WHERE token = $1 AND isactive = TRUE AND expiredat > NOW()`,
+    [token]
+  );
+
+  if (!result.rows[0]) return null;
+
+  const record = result.rows[0];
+
+  // Mark token as used
+  await pool.query(
+    `UPDATE resetpasswordtoken SET isactive = FALSE, updatedat = NOW()
+     WHERE resetpasswordid = $1`,
+    [record.resetpasswordid]
+  );
+
+  return record; // { voterid, candidateid }
+}
+
+// FIX #8: verifyEmailToken now uses consistent lowercase SQL identifiers.
+async function generateEmailVerificationToken(userId, isVoter = true) {
+  const token = crypto.randomBytes(32).toString("hex");
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+  if (isVoter) {
+    await pool.query(
+      `INSERT INTO emailverificationtoken (voterid, candidateid, token, expiredat, createdat, updatedat)
        VALUES ($1, NULL, $2, $3, NOW(), NOW())`,
       [userId, token, expiresAt]
     );
   } else {
     await pool.query(
-      `INSERT INTO emailVerificationToken (voterID, candidateID, token, expiredAt, createdAt, updatedAt)
+      `INSERT INTO emailverificationtoken (voterid, candidateid, token, expiredat, createdat, updatedat)
        VALUES (NULL, $1, $2, $3, NOW(), NOW())`,
       [userId, token, expiresAt]
     );
@@ -131,23 +172,25 @@ async function generateEmailVerificationToken(userId, isVoter = true) {
   return token;
 }
 
+// FIX #8: All SQL identifiers are now lowercase — no more "VoterID", "CandidateID" etc.
 async function verifyEmailToken(token) {
   const client = await pool.connect();
 
   try {
-    await client.query(`BEGIN`);
+    await client.query("BEGIN");
 
+    // FIX: was using "isActive" (quoted, case-sensitive) — now unquoted lowercase
     const tokenResult = await client.query(
-      `SELECT voterID, candidateID, token, isActive, expiredAt 
-       FROM emailVerificationToken
-       WHERE token = $1 AND "isActive" = TRUE AND expiredAt > NOW()`,
+      `SELECT voterid, candidateid, token, isactive, expiredat
+       FROM emailverificationtoken
+       WHERE token = $1 AND isactive = TRUE AND expiredat > NOW()`,
       [token]
     );
 
     const tokenRecord = tokenResult.rows[0];
 
     if (!tokenRecord) {
-      await client.query(`ROLLBACK`);
+      await client.query("ROLLBACK");
       return null;
     }
 
@@ -155,49 +198,54 @@ async function verifyEmailToken(token) {
     const candidateId = tokenRecord.candidateid;
 
     if (voterId) {
+      // FIX: was using "VoterID" (quoted PascalCase) — now lowercase
       const updateResult = await client.query(
-        `UPDATE voter SET IsVerified = TRUE WHERE "VoterID" = $1 RETURNING *`,
+        `UPDATE voter SET isverified = TRUE WHERE voterid = $1 RETURNING *`,
         [voterId]
       );
 
       if (updateResult.rows.length === 0) {
-        await client.query(`ROLLBACK`);
+        await client.query("ROLLBACK");
         console.error(`Voter with ID ${voterId} not found`);
         return null;
       }
     }
 
     if (candidateId) {
+      // FIX: was using "CandidateID" (quoted PascalCase) — now lowercase
       await client.query(
-        `UPDATE candidate SET IsVerified = TRUE WHERE "CandidateID" = $1`,
+        `UPDATE candidate SET isverified = TRUE WHERE candidateid = $1`,
         [candidateId]
       );
     }
 
+    // FIX: table and column names now lowercase
     await client.query(
-      `UPDATE "emailVerificationToken" SET "isActive" = FALSE WHERE token = $1`,
+      `UPDATE emailverificationtoken SET isactive = FALSE WHERE token = $1`,
       [token]
     );
 
     let user;
     if (voterId) {
+      // FIX: was using "VoterID" (quoted PascalCase)
       const userResult = await client.query(
-        `SELECT * FROM voter WHERE "VoterID" = $1`,
+        `SELECT * FROM voter WHERE voterid = $1`,
         [voterId]
       );
       user = userResult.rows[0];
     } else if (candidateId) {
+      // FIX: was using "CandidateID" (quoted PascalCase)
       const userResult = await client.query(
-        `SELECT * FROM candidate WHERE "CandidateID" = $1`,
+        `SELECT * FROM candidate WHERE candidateid = $1`,
         [candidateId]
       );
       user = userResult.rows[0];
     }
 
-    await client.query(`COMMIT`);
+    await client.query("COMMIT");
     return user || null;
   } catch (error) {
-    await client.query(`ROLLBACK`);
+    await client.query("ROLLBACK");
     console.error("Error verifying email token:", error);
     throw error;
   } finally {

@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }) => {
     lastName,
     email,
     idNumber,
-    dataOfBirth,
+    dateOfBirth,   // FIX #18: was "dataOfBirth" (typo)
     phoneNumber,
     password,
     profileImage
@@ -64,7 +64,7 @@ export const AuthProvider = ({ children }) => {
     formData.append("lastName", lastName);
     formData.append("email", email);
     formData.append("idNumber", idNumber);
-    formData.append("dataOfBirth", dataOfBirth);
+    formData.append("dateOfBirth", dateOfBirth);  // FIX #18: was "dataOfBirth"
     formData.append("phoneNumber", phoneNumber);
     formData.append("password", password);
     if (profileImage) {
@@ -72,7 +72,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     const response = await axios.post("/voters/register", formData, {
-      headers: { "Content-Type": "multipart/form-data" }, // Axios will set boundary automatically
+      headers: { "Content-Type": "multipart/form-data" },
       withCredentials: true,
     });
     return response.data;
