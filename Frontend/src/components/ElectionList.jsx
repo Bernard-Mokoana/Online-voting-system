@@ -31,7 +31,12 @@ const ElectionList = ({ type = "active" }) => {
       .finally(() => setLoading(false));
   }, [type]);
 
-  if (loading) return <Typography variant="body2" sx={{ color: "#888", py: 2 }}>Loading elections…</Typography>;
+  if (loading)
+    return (
+      <Typography variant="body2" sx={{ color: "#888", py: 2 }}>
+        Loading elections…
+      </Typography>
+    );
   if (error) return <Alert severity="error">{error}</Alert>;
 
   return (
@@ -42,7 +47,10 @@ const ElectionList = ({ type = "active" }) => {
         </Grid>
       ) : (
         elections.map((election) => {
-          const isActive = new Date(election.startDate) <= new Date() && new Date(election.endDate) >= new Date();
+          const now = new Date();
+          const isUpcoming = new Date(election.startDate) > now;
+          const isActive = !isUpcoming && new Date(election.endDate) >= now;
+
           return (
             <Grid item xs={12} sm={6} md={4} key={election.electionId}>
               <Card
@@ -55,12 +63,24 @@ const ElectionList = ({ type = "active" }) => {
                 }}
               >
                 <CardContent sx={{ flexGrow: 1, pb: 1 }}>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700, flex: 1, lineHeight: 1.3 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      mb: 0.5,
+                    }}
+                  >
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ fontWeight: 700, flex: 1, lineHeight: 1.3 }}
+                    >
                       {election.electionName}
                     </Typography>
                     <Chip
-                      label={isActive ? "Active" : "Closed"}
+                      label={
+                        isActive ? "Active" : isUpcoming ? "Upcoming" : "Closed"
+                      }
                       size="small"
                       sx={{
                         ml: 1,
@@ -72,20 +92,28 @@ const ElectionList = ({ type = "active" }) => {
                       }}
                     />
                   </Box>
-                  <Typography variant="body2" sx={{ color: "#666", fontSize: "0.8rem", mb: 1.5 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ color: "#666", fontSize: "0.8rem", mb: 1.5 }}
+                  >
                     {election.description}
                   </Typography>
                   <Typography variant="caption" sx={{ color: "#aaa" }}>
-                    {new Date(election.startDate).toLocaleDateString()} – {new Date(election.endDate).toLocaleDateString()}
+                    {new Date(election.startDate).toLocaleDateString()} –{" "}
+                    {new Date(election.endDate).toLocaleDateString()}
                   </Typography>
                 </CardContent>
                 <Divider />
                 <CardActions sx={{ px: 2, py: 1, gap: 1 }}>
                   <Button
                     size="small"
-                    startIcon={<InfoOutlinedIcon sx={{ fontSize: "14px !important" }} />}
+                    startIcon={
+                      <InfoOutlinedIcon sx={{ fontSize: "14px !important" }} />
+                    }
                     sx={{ fontSize: "0.75rem", color: "#555" }}
-                    onClick={() => navigate(`/elections/${election.electionId}`)}
+                    onClick={() =>
+                      navigate(`/elections/${election.electionId}`)
+                    }
                   >
                     Details
                   </Button>
@@ -93,9 +121,17 @@ const ElectionList = ({ type = "active" }) => {
                     <Button
                       size="small"
                       variant="contained"
-                      startIcon={<HowToVoteIcon sx={{ fontSize: "14px !important" }} />}
-                      sx={{ fontSize: "0.75rem", background: "#2e7d32", "&:hover": { background: "#1b5e20" } }}
-                      onClick={() => navigate(`/elections/${election.electionId}/vote`)}
+                      startIcon={
+                        <HowToVoteIcon sx={{ fontSize: "14px !important" }} />
+                      }
+                      sx={{
+                        fontSize: "0.75rem",
+                        background: "#2e7d32",
+                        "&:hover": { background: "#1b5e20" },
+                      }}
+                      onClick={() =>
+                        navigate(`/elections/${election.electionId}/vote`)
+                      }
                     >
                       Vote Now
                     </Button>

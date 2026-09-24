@@ -31,6 +31,7 @@ const Vote = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -46,7 +47,8 @@ const Vote = () => {
   }, [electionId]);
 
   const handleVote = async () => {
-    if (!selectedCandidate) return;
+    if (!selectedCandidate || submitting) return;
+    setSubmitting(true);
     setError("");
     try {
       await axios.post("/votes", {
@@ -56,7 +58,11 @@ const Vote = () => {
       setSuccess("Your vote has been recorded successfully.");
       setTimeout(() => navigate("/voter-dashboard"), 2500);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to cast your vote. Please try again.");
+      setError(
+        err.response?.data?.message ||
+          "Failed to cast your vote. Please try again.",
+      );
+      setSubmitting(false);
     }
   };
 
@@ -69,7 +75,10 @@ const Vote = () => {
             Cast Your Vote
           </Typography>
           {election && (
-            <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.75)", mt: 0.5 }}>
+            <Typography
+              variant="body2"
+              sx={{ color: "rgba(255,255,255,0.75)", mt: 0.5 }}
+            >
               {election.electionname || election.electionName}
             </Typography>
           )}
@@ -77,10 +86,16 @@ const Vote = () => {
 
         <Container maxWidth="md" sx={{ py: 3 }}>
           {loading ? (
-            <Typography variant="body2" sx={{ color: "#888" }}>Loading candidates…</Typography>
+            <Typography variant="body2" sx={{ color: "#888" }}>
+              Loading candidates…
+            </Typography>
           ) : (
             <>
-              {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+              {error && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {error}
+                </Alert>
+              )}
               {success && (
                 <Alert severity="success" sx={{ mb: 2 }}>
                   {success} Redirecting to dashboard…
@@ -88,7 +103,10 @@ const Vote = () => {
               )}
 
               {election && (
-                <Paper variant="outlined" sx={{ p: 2.5, mb: 3, borderLeft: "3px solid #1a3a6b" }}>
+                <Paper
+                  variant="outlined"
+                  sx={{ p: 2.5, mb: 3, borderLeft: "3px solid #1a3a6b" }}
+                >
                   <Typography variant="body2" sx={{ color: "#555" }}>
                     {election.description}
                   </Typography>
@@ -104,7 +122,15 @@ const Vote = () => {
               )}
 
               <FormControl component="fieldset" sx={{ width: "100%" }}>
-                <FormLabel component="legend" sx={{ fontWeight: 700, color: "#1a1a1a", mb: 1.5, fontSize: "1rem" }}>
+                <FormLabel
+                  component="legend"
+                  sx={{
+                    fontWeight: 700,
+                    color: "#1a1a1a",
+                    mb: 1.5,
+                    fontSize: "1rem",
+                  }}
+                >
                   Select a Candidate
                 </FormLabel>
                 <RadioGroup
@@ -113,31 +139,54 @@ const Vote = () => {
                 >
                   {candidates.map((candidate) => (
                     <Card
-                      key={candidate.candidateId}   // FIX #15: was candidate.candidateid
+                      key={candidate.candidateId} // FIX #15: was candidate.candidateid
                       variant="outlined"
-                      onClick={() => !success && setSelectedCandidate(String(candidate.candidateId))}
+                      onClick={() =>
+                        !success &&
+                        setSelectedCandidate(String(candidate.candidateId))
+                      }
                       sx={{
                         mb: 1.5,
                         cursor: success ? "default" : "pointer",
-                        borderLeft: selectedCandidate === String(candidate.candidateId)
-                          ? "3px solid #2e7d32"
-                          : "3px solid transparent",
-                        background: selectedCandidate === String(candidate.candidateId)
-                          ? "#f1f8e9"
-                          : "#fff",
-                        "&:hover": { background: success ? undefined : "#f5f5f5" },
+                        borderLeft:
+                          selectedCandidate === String(candidate.candidateId)
+                            ? "3px solid #2e7d32"
+                            : "3px solid transparent",
+                        background:
+                          selectedCandidate === String(candidate.candidateId)
+                            ? "#f1f8e9"
+                            : "#fff",
+                        "&:hover": {
+                          background: success ? undefined : "#f5f5f5",
+                        },
                       }}
                     >
-                      <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
+                      <CardContent
+                        sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}
+                      >
                         <FormControlLabel
-                          value={String(candidate.candidateId)}  // FIX #15: was candidate.candidateid
-                          control={<Radio size="small" sx={{ color: "#2e7d32", "&.Mui-checked": { color: "#2e7d32" } }} />}
+                          value={String(candidate.candidateId)} // FIX #15: was candidate.candidateid
+                          control={
+                            <Radio
+                              size="small"
+                              sx={{
+                                color: "#2e7d32",
+                                "&.Mui-checked": { color: "#2e7d32" },
+                              }}
+                            />
+                          }
                           label={
                             <Box>
-                              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                              <Typography
+                                variant="subtitle2"
+                                sx={{ fontWeight: 700 }}
+                              >
                                 {candidate.firstName} {candidate.lastName}
                               </Typography>
-                              <Typography variant="body2" sx={{ color: "#777", fontSize: "0.8rem" }}>
+                              <Typography
+                                variant="body2"
+                                sx={{ color: "#777", fontSize: "0.8rem" }}
+                              >
                                 {candidate.position}
                               </Typography>
                             </Box>
@@ -164,8 +213,12 @@ const Vote = () => {
                   variant="contained"
                   startIcon={<HowToVoteIcon />}
                   onClick={handleVote}
-                  disabled={!selectedCandidate || !!success}
-                  sx={{ background: "#2e7d32", "&:hover": { background: "#1b5e20" }, px: 3 }}
+                  disabled={!selectedCandidate || !!success || submitting}
+                  sx={{
+                    background: "#2e7d32",
+                    "&:hover": { background: "#1b5e20" },
+                    px: 3,
+                  }}
                 >
                   Cast Vote
                 </Button>

@@ -42,23 +42,31 @@ const ElectionDetails = () => {
       .finally(() => setLoading(false));
   }, [electionId]);
 
-  if (loading) return (
-    <>
-      <Navigation />
-      <Box sx={{ px: 4, py: 3 }}><Typography variant="body2" sx={{ color: "#888" }}>Loading…</Typography></Box>
-    </>
-  );
+  if (loading)
+    return (
+      <>
+        <Navigation />
+        <Box sx={{ px: 4, py: 3 }}>
+          <Typography variant="body2" sx={{ color: "#888" }}>
+            Loading…
+          </Typography>
+        </Box>
+      </>
+    );
 
-  if (!election) return (
-    <>
-      <Navigation />
-      <Container maxWidth="md" sx={{ py: 4 }}>
-        <Alert severity="error">Election not found.</Alert>
-      </Container>
-    </>
-  );
+  if (!election)
+    return (
+      <>
+        <Navigation />
+        <Container maxWidth="md" sx={{ py: 4 }}>
+          <Alert severity="error">{error || "Election not found."}</Alert>
+        </Container>
+      </>
+    );
 
-  const isActive = new Date(election.startDate) <= new Date() && new Date(election.endDate) >= new Date();
+  const isActive =
+    new Date(election.startDate) <= new Date() &&
+    new Date(election.endDate) >= new Date();
 
   return (
     <>
@@ -80,17 +88,30 @@ const ElectionDetails = () => {
                 height: 20,
               }}
             />
-            <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.65)" }}>
-              {new Date(election.startDate).toLocaleDateString()} – {new Date(election.endDate).toLocaleDateString()}
+            <Typography
+              variant="caption"
+              sx={{ color: "rgba(255,255,255,0.65)" }}
+            >
+              {new Date(election.startDate).toLocaleDateString()} –{" "}
+              {new Date(election.endDate).toLocaleDateString()}
             </Typography>
           </Box>
         </Box>
 
         <Container maxWidth="lg" sx={{ py: 3 }}>
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
 
-          <Paper variant="outlined" sx={{ p: 2.5, mb: 3, borderLeft: "3px solid #1a3a6b" }}>
-            <Typography variant="body1" sx={{ color: "#444" }}>{election.description}</Typography>
+          <Paper
+            variant="outlined"
+            sx={{ p: 2.5, mb: 3, borderLeft: "3px solid #1a3a6b" }}
+          >
+            <Typography variant="body1" sx={{ color: "#444" }}>
+              {election.description}
+            </Typography>
           </Paper>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
@@ -101,15 +122,30 @@ const ElectionDetails = () => {
           </Box>
 
           {candidates.length === 0 ? (
-            <Alert severity="info">No candidates registered for this election yet.</Alert>
+            <Alert severity="info">
+              No candidates registered for this election yet.
+            </Alert>
           ) : (
             <Grid container spacing={2}>
               {candidates.map((candidate) => (
                 <Grid item xs={12} sm={6} md={4} key={candidate.candidateId}>
-                  <Card variant="outlined" sx={{ display: "flex", gap: 2, p: 2, alignItems: "flex-start" }}>
+                  <Card
+                    variant="outlined"
+                    sx={{
+                      display: "flex",
+                      gap: 2,
+                      p: 2,
+                      alignItems: "flex-start",
+                    }}
+                  >
                     <Avatar
                       src={candidate.profileImage}
-                      sx={{ width: 48, height: 48, border: "1px solid #e0e0e0", flexShrink: 0 }}
+                      sx={{
+                        width: 48,
+                        height: 48,
+                        border: "1px solid #e0e0e0",
+                        flexShrink: 0,
+                      }}
                     >
                       {candidate.firstName?.[0]}
                     </Avatar>
@@ -117,11 +153,23 @@ const ElectionDetails = () => {
                       <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
                         {candidate.firstName} {candidate.lastName}
                       </Typography>
-                      <Typography variant="body2" sx={{ color: "#777", fontSize: "0.8rem", mb: 0.5 }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ color: "#777", fontSize: "0.8rem", mb: 0.5 }}
+                      >
                         {candidate.position}
                       </Typography>
                       {candidate.biography && (
-                        <Typography variant="caption" sx={{ color: "#999", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: "#999",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
                           {candidate.biography}
                         </Typography>
                       )}
@@ -134,7 +182,14 @@ const ElectionDetails = () => {
 
           <Divider sx={{ my: 3 }} />
 
-          <Box sx={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 1.5 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 1.5,
+            }}
+          >
             <Button
               startIcon={<ArrowBackIcon />}
               onClick={() => navigate("/")}
@@ -155,7 +210,10 @@ const ElectionDetails = () => {
                   variant="contained"
                   startIcon={<HowToVoteIcon />}
                   onClick={() => navigate(`/elections/${electionId}/vote`)}
-                  sx={{ background: "#2e7d32", "&:hover": { background: "#1b5e20" } }}
+                  sx={{
+                    background: "#2e7d32",
+                    "&:hover": { background: "#1b5e20" },
+                  }}
                 >
                   Vote Now
                 </Button>

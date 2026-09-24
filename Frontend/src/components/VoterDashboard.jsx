@@ -25,12 +25,13 @@ const VoterDashboard = () => {
   const { user } = useAuth();
   const [activeElections, setActiveElections] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     axios
       .get("/elections/active")
       .then((res) => setActiveElections(res.data.data || res.data))
-      .catch(() => {})
+      .catch(() => setError("Failed to load active elections."))
       .finally(() => setLoading(false));
   }, []);
 
@@ -43,7 +44,10 @@ const VoterDashboard = () => {
           <Typography variant="h5" sx={{ color: "#fff", fontWeight: 700 }}>
             Welcome back, {user?.firstName || "Voter"}
           </Typography>
-          <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.7)", mt: 0.5 }}>
+          <Typography
+            variant="body2"
+            sx={{ color: "rgba(255,255,255,0.7)", mt: 0.5 }}
+          >
             Cast your vote in an active election below.
           </Typography>
         </Box>
@@ -56,7 +60,11 @@ const VoterDashboard = () => {
               size="small"
               startIcon={<HistoryIcon />}
               onClick={() => navigate("/voting-history")}
-              sx={{ borderColor: "#ccc", color: "#333", "&:hover": { borderColor: "#1a3a6b", color: "#1a3a6b" } }}
+              sx={{
+                borderColor: "#ccc",
+                color: "#333",
+                "&:hover": { borderColor: "#1a3a6b", color: "#1a3a6b" },
+              }}
             >
               Voting History
             </Button>
@@ -65,7 +73,11 @@ const VoterDashboard = () => {
               size="small"
               startIcon={<InfoOutlinedIcon />}
               onClick={() => navigate("/profile")}
-              sx={{ borderColor: "#ccc", color: "#333", "&:hover": { borderColor: "#1a3a6b", color: "#1a3a6b" } }}
+              sx={{
+                borderColor: "#ccc",
+                color: "#333",
+                "&:hover": { borderColor: "#1a3a6b", color: "#1a3a6b" },
+              }}
             >
               My Profile
             </Button>
@@ -81,13 +93,21 @@ const VoterDashboard = () => {
               <Chip
                 label={activeElections.length}
                 size="small"
-                sx={{ background: "#1a3a6b", color: "#fff", fontWeight: 600, height: 20, fontSize: "0.75rem" }}
+                sx={{
+                  background: "#1a3a6b",
+                  color: "#fff",
+                  fontWeight: 600,
+                  height: 20,
+                  fontSize: "0.75rem",
+                }}
               />
             )}
           </Box>
 
           {loading ? (
-            <Typography variant="body2" sx={{ color: "#888" }}>Loading elections…</Typography>
+            <Typography variant="body2" sx={{ color: "#888" }}>
+              Loading elections…
+            </Typography>
           ) : activeElections.length === 0 ? (
             <Alert severity="info" sx={{ maxWidth: 480 }}>
               There are no active elections at the moment. Check back later.
@@ -107,14 +127,24 @@ const VoterDashboard = () => {
                     }}
                   >
                     <CardContent sx={{ flexGrow: 1, pb: 1 }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ fontWeight: 700, mb: 0.5 }}
+                      >
                         {election.electionName}
                       </Typography>
-                      <Typography variant="body2" sx={{ color: "#666", mb: 1.5, fontSize: "0.8rem" }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ color: "#666", mb: 1.5, fontSize: "0.8rem" }}
+                      >
                         {election.description}
                       </Typography>
                       <Typography variant="caption" sx={{ color: "#999" }}>
-                        Closes: {new Date(election.endDate).toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" })}
+                        Closes:{" "}
+                        {new Date(election.endDate).toLocaleDateString(
+                          "en-ZA",
+                          { day: "numeric", month: "short", year: "numeric" },
+                        )}
                       </Typography>
                     </CardContent>
                     <Divider />
@@ -122,16 +152,26 @@ const VoterDashboard = () => {
                       <Button
                         size="small"
                         sx={{ fontSize: "0.75rem", color: "#555" }}
-                        onClick={() => navigate(`/elections/${election.electionId}`)}
+                        onClick={() =>
+                          navigate(`/elections/${election.electionId}`)
+                        }
                       >
                         Details
                       </Button>
                       <Button
                         size="small"
                         variant="contained"
-                        startIcon={<HowToVoteIcon sx={{ fontSize: "14px !important" }} />}
-                        sx={{ fontSize: "0.75rem", background: "#2e7d32", "&:hover": { background: "#1b5e20" } }}
-                        onClick={() => navigate(`/elections/${election.electionId}/vote`)}
+                        startIcon={
+                          <HowToVoteIcon sx={{ fontSize: "14px !important" }} />
+                        }
+                        sx={{
+                          fontSize: "0.75rem",
+                          background: "#2e7d32",
+                          "&:hover": { background: "#1b5e20" },
+                        }}
+                        onClick={() =>
+                          navigate(`/elections/${election.electionId}/vote`)
+                        }
                       >
                         Vote Now
                       </Button>
