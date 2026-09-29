@@ -7,7 +7,7 @@ function Register() {
     lastName: "",
     email: "",
     idNumber: "",
-    dataOfBirth: "",
+    dateOfBirth: "",
     phoneNumber: "",
     password: "",
   });
@@ -41,7 +41,7 @@ function Register() {
           lastName: "",
           email: "",
           idNumber: "",
-          dataOfBirth: "",
+          dateOfBirth: "",
           phoneNumber: "",
           password: "",
         });
@@ -126,8 +126,8 @@ function Register() {
           <label>Date of Birth:</label>
           <input
             type="date"
-            name="dataOfBirth"
-            value={formData.dataOfBirth}
+            name="dateOfBirth"
+            value={formData.dateOfBirth}
             onChange={handleChange}
             required
             style={{ width: "100%", padding: "8px", marginTop: "5px" }}

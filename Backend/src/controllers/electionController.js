@@ -68,7 +68,65 @@ export const getAllElections = async (req, res) => {
 
 export const getActiveElections = async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM ActiveElections");
+    let result;
+    try {
+      result = await pool.query("SELECT * FROM ActiveElections");
+    } catch (viewError) {
+      // Fallback: Query base tables directly if ActiveElections view does not exist
+      result = await pool.query(`
+        SELECT 
+          e.ElectionID,
+          e.ElectionName,
+          COALESCE(et.TypeName, 'General') AS ElectionType,
+          e.StartDate,
+          e.EndDate,
+          e.Description,
+          e.IsActive,
+          COALESCE(a.Username, 'admin') AS AdminUsername,
+          COUNT(DISTINCT c.CandidateID)::int AS CandidateCount,
+          COUNT(DISTINCT v.VoteID)::int AS VoteCount
+        FROM Election e
+        LEFT JOIN ElectionType et ON e.ElectionTypeID = et.ElectionTypeID
+        LEFT JOIN Admin a ON e.AdminID = a.AdminID
+        LEFT JOIN Candidate c ON e.ElectionID = c.ElectionID
+        LEFT JOIN Vote v ON e.ElectionID = v.ElectionID
+        WHERE e.IsActive = TRUE
+          AND (
+            (e.StartDate IS NULL OR e.StartDate <= CURRENT_TIMESTAMP)
+            AND (e.EndDate IS NULL OR e.EndDate >= CURRENT_TIMESTAMP)
+          )
+        GROUP BY e.ElectionID, e.ElectionName, et.TypeName, e.StartDate, e.EndDate, e.Description, e.IsActive, a.Username
+        ORDER BY e.StartDate DESC
+      `);
+
+      // If no elections fall within the current timestamp window, check if any elections have IsActive = TRUE
+      if (result.rows.length === 0) {
+        const anyActive = await pool.query(`
+          SELECT 
+            e.ElectionID,
+            e.ElectionName,
+            COALESCE(et.TypeName, 'General') AS ElectionType,
+            e.StartDate,
+            e.EndDate,
+            e.Description,
+            e.IsActive,
+            COALESCE(a.Username, 'admin') AS AdminUsername,
+            COUNT(DISTINCT c.CandidateID)::int AS CandidateCount,
+            COUNT(DISTINCT v.VoteID)::int AS VoteCount
+          FROM Election e
+          LEFT JOIN ElectionType et ON e.ElectionTypeID = et.ElectionTypeID
+          LEFT JOIN Admin a ON e.AdminID = a.AdminID
+          LEFT JOIN Candidate c ON e.ElectionID = c.ElectionID
+          LEFT JOIN Vote v ON e.ElectionID = v.ElectionID
+          WHERE e.IsActive = TRUE
+          GROUP BY e.ElectionID, e.ElectionName, et.TypeName, e.StartDate, e.EndDate, e.Description, e.IsActive, a.Username
+          ORDER BY e.StartDate DESC
+        `);
+        if (anyActive.rows.length > 0) {
+          result = anyActive;
+        }
+      }
+    }
 
     return res
       .status(200)
@@ -202,16 +260,42 @@ export const deleteElection = async (req, res) => {
 export const getElectionResults = async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await pool.query(
-      "SELECT * FROM ElectionResults WHERE ElectionID = $1",
-      [id]
-    );
+    let result;
+    try {
+      result = await pool.query(
+        "SELECT * FROM ElectionResults WHERE ElectionID = $1",
+        [id]
+      );
+    } catch (viewError) {
+      // Fallback: Calculate directly from Election, Candidate, and Vote tables
+      result = await pool.query(
+        `SELECT 
+          e.ElectionID,
+          e.ElectionName,
+          c.CandidateID,
+          c.FirstName || ' ' || c.LastName AS CandidateName,
+          c.Position,
+          COUNT(v.VoteID)::int AS VoteCount,
+          ROUND(
+            (COUNT(v.VoteID)::DECIMAL / NULLIF(
+              (SELECT COUNT(*) FROM Vote WHERE ElectionID = e.ElectionID), 0
+            )) * 100, 2
+          ) AS VotePercentage
+        FROM Election e
+        JOIN Candidate c ON e.ElectionID = c.ElectionID
+        LEFT JOIN Vote v ON c.CandidateID = v.CandidateID
+        WHERE e.ElectionID = $1
+        GROUP BY e.ElectionID, e.ElectionName, c.CandidateID, c.FirstName, c.LastName, c.Position
+        ORDER BY VoteCount DESC`,
+        [id]
+      );
+    }
 
     if (result.rows.length === 0) {
       return res
-        .status(404)
+        .status(200)
         .json({
-          success: false,
+          success: true,
           message: "No results found for this election",
           data: [],
         });

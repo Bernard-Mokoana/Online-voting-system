@@ -3,11 +3,13 @@ import dotenv from "dotenv";
 import cors from "cors";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
 
 dotenv.config();
 
 const app = express();
 
+app.use(helmet());
 app.use(
   cors({
     origin: [
@@ -18,7 +20,7 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 app.use(morgan("dev"));
 
@@ -44,7 +46,9 @@ app.get("/", (req, res) => {
 
 app.use((err, req, res, next) => {
   console.error("Error:", err.stack);
-  res.status(500).json({ message: "Server error", error: err.message });
+  const message =
+    process.env.NODE_ENV === "production" ? "Server error" : err.message;
+  res.status(500).json({ message });
 });
 
 export default app;

@@ -363,16 +363,16 @@ CREATE OR REPLACE VIEW ActiveElections AS
 SELECT 
     e.ElectionID,
     e.ElectionName,
-    et.TypeName AS ElectionType,
+    COALESCE(et.TypeName, 'General') AS ElectionType,
     e.StartDate,
     e.EndDate,
     e.Description,
-    a.Username AS AdminUsername,
+    COALESCE(a.Username, 'admin') AS AdminUsername,
     COUNT(DISTINCT c.CandidateID) AS CandidateCount,
     COUNT(DISTINCT v.VoteID) AS VoteCount
 FROM Election e
-JOIN ElectionType et ON e.ElectionTypeID = et.ElectionTypeID
-JOIN Admin a ON e.AdminID = a.AdminID
+LEFT JOIN ElectionType et ON e.ElectionTypeID = et.ElectionTypeID
+LEFT JOIN Admin a ON e.AdminID = a.AdminID
 LEFT JOIN Candidate c ON e.ElectionID = c.ElectionID
 LEFT JOIN Vote v ON e.ElectionID = v.ElectionID
 WHERE e.IsActive = TRUE

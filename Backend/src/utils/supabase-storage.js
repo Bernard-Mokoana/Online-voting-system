@@ -35,7 +35,7 @@ export const getSignedUrl = async (path, expiredIn = 60) => {
   try {
     const { data, error } = await supabase.storage
       .from(BUCKET)
-      .createSignedUploadUrl(path, expiredIn);
+      .createSignedUrl(path, expiredIn);
 
     if (error || !data?.signedUrl) throw error;
 

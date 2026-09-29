@@ -199,14 +199,12 @@ export const getCandidateById = async (req, res) => {
     }
 
     const candidate = result.rows[0];
-    console.log("Raw profileimage path from DB:", candidate.profileimage);
     if (candidate.profileimage) {
       candidate.profileimage = getPublicUrl(candidate.profileimage, {
         width: 120,
         height: 120,
         resize: "cover",
       });
-      console.log("Generated public URL with transform:", candidate.profileimage);
     }
 
     return res.status(200).json({
@@ -348,7 +346,7 @@ export const deleteCandidate = async (req, res) => {
     if (!password) {
       return res
         .status(400)
-        .json({ message: "Password is required to delete the password" });
+        .json({ message: "Password is required to delete your account" });
     }
 
     const candidateResults = await pool.query(
@@ -375,7 +373,8 @@ export const deleteCandidate = async (req, res) => {
 
     return res.status(200).json({ message: "Candidate deleted successfully" });
   } catch (error) {
-    return res.status(500).json({ message: "Internal server error", error });
+    console.error("Error deleting candidate:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 

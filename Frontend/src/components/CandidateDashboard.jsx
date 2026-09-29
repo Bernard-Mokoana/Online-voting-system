@@ -39,7 +39,7 @@ const CandidateDashboard = () => {
       axios.get(`/candidates/${authUser.id}`),
     ])
       .then(([electionsRes, candidateRes]) => {
-        if (elections.status === "rejected") {
+        if (electionsRes.status === "rejected") {
           setError("Failed to load your elections.");
         }
         const elections = electionsRes.value?.data?.data || [];

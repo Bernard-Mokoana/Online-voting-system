@@ -48,16 +48,42 @@ export const getVoteResults = async (req, res) => {
   try {
     const electionId = Number(req.params.electionId ?? req.params.ElectionId);
 
-    const results = await pool.query(
-      `SELECT * FROM ElectionResults WHERE ElectionID = $1`,
-      [electionId]
-    );
+    let results;
+    try {
+      results = await pool.query(
+        `SELECT * FROM ElectionResults WHERE ElectionID = $1`,
+        [electionId]
+      );
+    } catch (viewError) {
+      // Fallback: Compute directly from Election, Candidate, and Vote tables
+      results = await pool.query(
+        `SELECT 
+          e.ElectionID,
+          e.ElectionName,
+          c.CandidateID,
+          c.FirstName || ' ' || c.LastName AS CandidateName,
+          c.Position,
+          COUNT(v.VoteID)::int AS VoteCount,
+          ROUND(
+            (COUNT(v.VoteID)::DECIMAL / NULLIF(
+              (SELECT COUNT(*) FROM Vote WHERE ElectionID = e.ElectionID), 0
+            )) * 100, 2
+          ) AS VotePercentage
+        FROM Election e
+        JOIN Candidate c ON e.ElectionID = c.ElectionID
+        LEFT JOIN Vote v ON c.CandidateID = v.CandidateID
+        WHERE e.ElectionID = $1
+        GROUP BY e.ElectionID, e.ElectionName, c.CandidateID, c.FirstName, c.LastName, c.Position
+        ORDER BY VoteCount DESC`,
+        [electionId]
+      );
+    }
 
     if (results.rows.length === 0) {
       return res
-        .status(404)
+        .status(200)
         .json({
-          success: false,
+          success: true,
           message: "No results found for the election",
           data: [],
         });
@@ -69,7 +95,7 @@ export const getVoteResults = async (req, res) => {
       data: results.rows.map(mapVoteResultRow),
     });
   } catch (err) {
-    console.error(err.message);
+    console.error("Error fetching results:", err.message);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch results",

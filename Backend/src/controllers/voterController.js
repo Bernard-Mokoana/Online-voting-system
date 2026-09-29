@@ -89,7 +89,7 @@ export const registerUser = async (req, res) => {
 
     try {
       const verificationToken = await generateEmailVerificationToken(
-        voterId,
+        userRow.voterid,
         true
       );
       await sendEmailVerification(email, verificationToken);

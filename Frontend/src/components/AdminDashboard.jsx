@@ -421,7 +421,7 @@ const AdminDashboard = () => {
             onSubmit={handleCreate}
             sx={{ pt: 1 }}
           >
-            {renderElectionFormFields}
+            {renderElectionFormFields()}
           </Box>
         </DialogContent>
         <Divider />
@@ -451,7 +451,7 @@ const AdminDashboard = () => {
             onSubmit={handleEdit}
             sx={{ pt: 1 }}
           >
-            {renderElectionFormFields}
+            {renderElectionFormFields()}
           </Box>
         </DialogContent>
         <Divider />
