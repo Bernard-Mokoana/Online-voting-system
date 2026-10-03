@@ -19,6 +19,7 @@
   "author": "Bernard Mokoana",
   "license": "ISC",
   "dependencies": {
+    "@supabase/server": "^1.8.1",
     "@supabase/supabase-js": "^2.45.0",
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.7",
